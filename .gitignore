@@ -1,0 +1,40 @@
+# ---- Autodesk EAGLE / Fusion Electronics ----
+# Backup files (EAGLE writes these constantly; never commit them)
+*.s#?
+*.b#?
+*.l#?
+*.b$?
+*.s$?
+*.l$?
+
+# Lock files
+*.lck
+*#
+
+# Autorouter output
+*.pro
+*.job
+
+# ---- Fabrication output ----
+# Regenerate from source rather than versioning; delete these two lines
+# if you'd rather ship a ready-to-order zip with the repo.
+gerbers/
+*.zip
+
+# ---- ESP-IDF / Arduino build artifacts ----
+build/
+sdkconfig
+sdkconfig.old
+managed_components/
+dependencies.lock
+*.elf
+*.bin
+*.map
+
+# ---- Editors / OS ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
