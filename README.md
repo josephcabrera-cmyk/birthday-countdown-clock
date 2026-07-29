@@ -5,7 +5,7 @@ A custom PCB that counts down to a chosen birthday in `days:hours:minutes:second
 <!-- TODO: replace with your demo GIF once uploaded (drag the file into a GitHub issue to get a hosted URL, then paste it here) -->
 ![Demo](docs/demo.gif)
 
-▶ **[Full demo video](TODO_YOUTUBE_UNLISTED_LINK)**
+▶ **[Full demo video](https://youtu.be/9NLcifpYV80)**
 
 ---
 
