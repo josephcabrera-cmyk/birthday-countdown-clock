@@ -138,9 +138,9 @@ Replace `COM3` with the board's port — on Linux or macOS this is typically `/d
 
 ## Manufacturing
 
-Bare boards were fabricated by **JLCPCB** as a 2-layer design. All components were sourced from DigiKey and the board was assembled by hand — every part is 0805 passive, SOIC/TSSOP, or through-hole, with no BGA or fine-pitch QFN, which keeps hand-soldering practical.
+Bare boards were fabricated by **JLCPCB** as a 2-layer design, with all components sourced separately from DigiKey and assembled by hand.
 
-The ESP32 DevKit mounts on headers rather than being soldered down, so it can be removed and reused.
+The part selection keeps that practical: every passive is 0805, the RTC is an 8-pin SOIC, and the display driver is a 16-pin QSOP. Nothing on the board is BGA or fine-pitch QFN, and the ESP32 DevKit sits on a through-hole footprint. The QSOP's 0.635 mm pitch is the tightest thing to solder by hand.
 
 ---
 
