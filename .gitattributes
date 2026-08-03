@@ -5,6 +5,10 @@
 *.brd -text
 *.lbr -text
 
+# STEP is text, but a textual diff of a 3D export is never useful.
+*.step -text -diff
+*.stp  -text -diff
+
 # Firmware keeps normalised LF in the repository.
 *.c text eol=lf
 *.h text eol=lf

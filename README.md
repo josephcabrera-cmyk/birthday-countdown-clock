@@ -21,7 +21,7 @@ Designed, laid out, assembled, and programmed as a personal hardware project.
 | **Display driver** | MAX6951CEE+ (SPI, 1 MHz) |
 | **Display** | 9 × SunLED XZFMDK07C, common cathode |
 | **Audio** | PUI Audio SMTB-0927-TW-R magnetic transducer |
-| **Power** | USB, 5 V in / 3.3 V logic |
+| **Power** | Micro-USB via the DevKit, 5 V in / 3.3 V logic |
 | **Firmware** | C, ESP-IDF |
 | **PCB** | 2-layer, designed in Autodesk EAGLE / Fusion Electronics |
 
@@ -70,7 +70,7 @@ Three of the RTC's pins are left unconnected: `32KHZ`, `RST`, and `INT/SQW`. The
 
 ### Power
 
-USB input at 5 V. There is no regulator on the custom board — the 3.3 V rail is supplied by the **AMS1117-3.3 already onboard the ESP32-DEVKITC-32E**, and the MAX6951, the RTC, and the LEDs all run from that single 3.3 V rail.
+Power enters at 5 V through the DevKit's Micro-USB connector; the custom board carries no connector or regulator of its own. The 3.3 V rail is supplied by the **AMS1117-3.3 already onboard the ESP32-DEVKITC-32E**, and the MAX6951, the RTC, and the LEDs all run from that single rail.
 
 Running the display driver from the same 3.3 V rail as the ESP32 is deliberate. The MAX6951 is specified from 2.7 V to 5.5 V and its logic inputs are CMOS levels referenced to V+, so keeping it at 3.3 V means the ESP32's SPI lines drive it directly with no level shifting.
 
@@ -139,6 +139,7 @@ Replace `COM3` with the board's port — on Linux or macOS this is typically `/d
 │   ├── schematic.pdf             # Schematic
 │   ├── board-layout.pdf          # PCB layout
 │   ├── bill-of-materials.pdf     # BOM
+│   ├── board-3d.step             # 3D model of the assembled board
 │   └── source/
 │       ├── schematic.sch         # EAGLE 9.7 source
 │       └── board-layout.brd      # EAGLE 9.7 source
@@ -146,7 +147,9 @@ Replace `COM3` with the board's port — on Linux or macOS this is typically `/d
     └── demo.gif
 ```
 
-The PDFs are for reading; the files under `hardware/source/` are the editable originals. Both open in Autodesk EAGLE 9.7 or later, and in Fusion Electronics.
+The PDFs are for reading; the files under `hardware/source/` are the editable originals, and open in Autodesk EAGLE 9.7 or later and in Fusion Electronics.
+
+`board-3d.step` is the assembled board as solid geometry, exported to the AP214 schema. It carries real solids rather than a surface mesh, so it can be measured, sectioned, and used as a fit reference — which is what makes designing an enclosure around it practical. STEP is a neutral standard, so it opens in FreeCAD, KiCad, Onshape, SolidWorks, and Inventor without needing a Fusion licence.
 
 ---
 
@@ -180,7 +183,9 @@ Working through the build surfaced a number of things worth changing:
 
 9. **Use the target's minute and second in the interval math.** Setup collects a target hour, minute, and second, but the countdown arithmetic effectively assumes a target minute of zero. The buzzer trigger does compare the minute correctly, so the tune fires at the right time — but the displayed remaining time can disagree with it for any target that is not on the hour.
 
-10. **USB-C instead of USB-A**, and a proper enclosure — a nine-digit display is worth mounting behind a bezel.
+10. **USB-C instead of Micro-USB**, which would mean putting a connector and a regulator on the board itself rather than inheriting both from the DevKit.
+
+11. **An enclosure.** A nine-digit display is worth mounting behind a bezel, and `hardware/board-3d.step` exists precisely so that can be modelled against real geometry instead of caliper measurements.
 
 ---
 
