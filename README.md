@@ -6,13 +6,17 @@ A custom PCB that counts down to a chosen birthday in `days:hours:minutes:second
 
 ▶ **[Full demo video](https://youtu.be/9NLcifpYV80)**
 
+<img src="docs/board-assembled.jpg" width="560" alt="The assembled board seated in its 3D-printed enclosure, all nine digits populated">
+
+*The finished board in its printed case. Nine displays, the MAX6951 at left, the DevKit socketed at right, and the three setup buttons along the bottom edge.*
+
 ---
 
 ## Overview
 
 The clock takes the current time and a target date entered through three onboard pushbuttons, computes the remaining interval against a dedicated real-time clock, and refreshes the display once per second. When the RTC reaches the target month, day, hour, and minute, the countdown reads zero and a buzzer routine plays.
 
-Designed, laid out, assembled, and programmed as a personal hardware project.
+Designed, laid out, assembled, and programmed solo as the final project for ESE 323 at Stony Brook University, submitted December 2024. The original course write-up and presentation are included under `docs/`.
 
 | | |
 |---|---|
@@ -34,9 +38,9 @@ Designed, laid out, assembled, and programmed as a personal hardware project.
 | SPI DIN | 23 | | Digit 9 — segment C | 17 |
 | SPI CLK | 18 | | Digit 9 — segment D | 13 |
 | SPI CS | 5 | | Digit 9 — segment E | 14 |
-| Button — UP | 26 | | Digit 9 — segment F | 32 |
-| Button — DOWN | 27 | | Digit 9 — segment G | 16 |
-| Button — SET | 25 | | Digit 9 — decimal point | 19 |
+| Button — UP (SW2) | 26 | | Digit 9 — segment F | 32 |
+| Button — DOWN (SW3) | 27 | | Digit 9 — segment G | 16 |
+| Button — SET (SW1) | 25 | | Digit 9 — decimal point | 19 |
 | Buzzer | 33 | | | |
 
 ---
@@ -89,17 +93,19 @@ Two decisions in the board file are worth calling out, since neither is visible 
 
 ## User interface
 
-Three tactile switches (Omron B3S-1000, active low, 10 kΩ pullups, 50 ms software debounce) drive the entire interface:
+Three Omron B3S-1000 tactile switches drive the entire interface. Each is active low, pulled up by a 10 kΩ resistor with a 1 µF capacitor to ground — a 10 ms RC time constant that debounces in hardware — and the firmware applies a further 50 ms software debounce on top.
 
-| Button | Function |
-|---|---|
-| **UP** | Increment the active field, wrapping at its limit |
-| **DOWN** | Decrement the active field, wrapping at its limit |
-| **SET** | Commit the active field and advance to the next |
+| Switch | GPIO | Function |
+|---|---|---|
+| **SW1 — SET** | 25 | Commit the active field and advance to the next |
+| **SW2 — UP** | 26 | Increment the active field, wrapping at its limit |
+| **SW3 — DOWN** | 27 | Decrement the active field, wrapping at its limit |
 
 Setup runs in two stages. First the current time — year, month, day, hour, minute, second — which is written to the DS3231. Then a `BIRTHDAY` prompt, followed by the target month, day, hour, minute, and second. Each field is shown with its name spelled on the display alongside the value, and field limits are enforced as you scroll, including a correct maximum day per month with leap-year handling.
 
 Pressing **SET** during the countdown re-enters birthday setup without disturbing the clock.
+
+**Known issue:** that re-entry path does not fully work. The device returns to the birthday prompts, but the values cannot actually be changed from what was entered at first boot. This is a firmware fault, not a hardware one — the same buttons set those fields correctly during the initial run — and it is recorded here because it was identified during testing and reported in the course write-up rather than discovered afterwards.
 
 **On persistence — worth being explicit:** the current time is stored in the DS3231's registers, but the target date is held only in RAM. Neither survives a power cycle on this build: the RTC has no backup cell, and the target is never written to flash. Both must be re-entered at every boot. The DS3231 cannot help here even in principle — unlike the DS1307, which has 56 bytes of battery-backed scratch RAM, the DS3231 has no general-purpose user RAM. Storing the target in the ESP32's NVS is the correct fix and is listed below.
 
@@ -142,12 +148,19 @@ Replace `COM3` with the board's port — on Linux or macOS this is typically `/d
 │   ├── board-3d.step             # 3D model of the assembled board
 │   └── source/
 │       ├── schematic.sch         # EAGLE 9.7 source
-│       └── board-layout.brd      # EAGLE 9.7 source
+│       ├── board-layout.brd      # EAGLE 9.7 source
+│       └── bill-of-materials.xlsx  # BOM source
 └── docs/
-    └── demo.gif
+    ├── demo.gif
+    ├── board-assembled.jpg       # Finished board in its printed case
+    ├── board-assembly.jpg        # Part-way through hand assembly
+    ├── final-paper.docx          # ESE 323 course write-up, Dec 2024
+    └── presentation.pptx         # ESE 323 project presentation
 ```
 
 The PDFs are for reading; the files under `hardware/source/` are the editable originals, and open in Autodesk EAGLE 9.7 or later and in Fusion Electronics.
+
+`docs/final-paper.docx` and `docs/presentation.pptx` are the original December 2024 course submissions. They are the primary record of what was built and tested at the time, including the enclosure design and the results section documenting the re-entry bug above. The paper is as submitted except for a closing section of feedback addressed to the course instructor, which has been removed as irrelevant here.
 
 `board-3d.step` is the assembled board as solid geometry, exported to the AP214 schema. It carries real solids rather than a surface mesh, so it can be measured, sectioned, and used as a fit reference — which is what makes designing an enclosure around it practical. STEP is a neutral standard, so it opens in FreeCAD, KiCad, Onshape, SolidWorks, and Inventor without needing a Fusion licence.
 
@@ -159,33 +172,43 @@ Bare boards were fabricated by **JLCPCB** as a 2-layer design, with all componen
 
 The part selection keeps that practical: every passive is 0805, the RTC is an 8-pin SOIC, and the display driver is a 16-pin QSOP. Nothing on the board is BGA or fine-pitch QFN, and the ESP32 DevKit sits on a through-hole footprint. The QSOP's 0.635 mm pitch is the tightest thing to solder by hand.
 
+<img src="docs/board-assembly.jpg" width="520" alt="The board part-way through assembly, held in a Stickvise">
+
+*Part-way through assembly. The MAX6951, RTC passives and the `RSET`/`CSET` network are down; the displays, switches and buzzer are not. The labelled test points and the R8–R15 ballast cluster beside LED8 are both visible on the silkscreen.*
+
 ---
 
 ## Possible improvements
 
-Working through the build surfaced a number of things worth changing:
+Some of these were identified at the time and recorded in the December 2024 write-up; the rest came out of re-reading the board file and the datasheets afterwards.
+
+### Firmware
 
 1. **Persist the target date to NVS.** The birthday currently lives in RAM globals and is lost at every power cycle. `nvs_set_u8` for month and day, a `nvs_commit`, and a first-boot check would remove the most annoying part of using the device. Flash endurance is irrelevant here — this gets written a handful of times ever.
 
-2. **Populate a backup cell on `VBAT`.** Without it the RTC's entire advantage over the ESP32's internal timer is lost the moment power drops. With NVS storing the target as well, a battery-backed RTC would mean the clock simply resumes on power-up with nothing to re-enter.
+2. **Fix the birthday re-entry path.** Pressing `SET` during the countdown returns to the birthday prompts, but the values cannot actually be changed once they have been set. This was known at submission and is the most user-visible defect in the firmware.
 
 3. **Check the oscillator stop flag at boot.** Register `0Fh` bit 7 (`OSF`) is set whenever the oscillator has halted, which flags the stored time as meaningless. The firmware should read it and force time-set mode rather than counting down from garbage.
 
-4. **Route `INT/SQW` to a GPIO** and drive the update from the DS3231's 1 Hz square wave instead of `vTaskDelay`. Polling works, but the update instant slowly drifts relative to the RTC's second boundary. Two things to get right: `INT/SQW` is open-drain and needs a pullup, and `INTCN` in register `0Eh` defaults to 1 (alarm mode) with `RS2:RS1` defaulting to 8.192 kHz — so square-wave output at 1 Hz requires explicitly clearing `INTCN` and writing `RS2 = RS1 = 0`, not inheriting defaults. The ISR itself should do nothing but notify a task; I²C must never be run from interrupt context.
+4. **Use the target's minute and second in the interval math.** Setup collects a target hour, minute, and second, but the countdown arithmetic effectively assumes a target minute of zero. The buzzer trigger does compare the minute correctly, so the tune fires at the right time — but the displayed remaining time can disagree with it for any target that is not on the hour.
 
-5. **Buffer the buzzer.** The SMTB-0927-TW-R is a magnetic transducer with a 16 Ω coil and an 80 mA maximum rating. Through the 47 Ω series resistor from a 3.3 V GPIO, peak current is about **52 mA**, past the ESP32's 40 mA per-pin absolute maximum. PWM at 50% duty halves the average but not the peak. A small N-channel MOSFET or a 2N3904 would fix this properly.
+5. **Drive the buzzer near its resonance.** That transducer's 95 dBA rating is at its 2.7 kHz resonant frequency, but the melody plays notes from 262 Hz to 494 Hz — one to three octaves below it. Output at those frequencies is far quieter than the part is capable of. Transposing the melody up, or accepting a single-tone alert at 2.7 kHz, would be dramatically louder for zero cost.
 
-6. **Drive the buzzer near its resonance.** That transducer's 95 dBA rating is at its 2.7 kHz resonant frequency, but the melody plays notes from 262 Hz to 494 Hz — one to three octaves below it. Output at those frequencies is far quieter than the part is capable of. Transposing the melody up, or accepting a single-tone alert at 2.7 kHz, would be dramatically louder for zero cost.
+### Hardware
 
-7. **Move segment A off IO2.** IO2 is a boot strapping pin on the ESP32. An LED to a common cathode is a weak enough pull-down that it boots fine in practice, but it is an unnecessary coupling between display state and boot behaviour. (IO5, used for SPI CS, is also a strapping pin, though it idles high and is far less likely to cause trouble.)
+6. **Give the clock a memory — by battery, or by removing the RTC entirely.** As built, `VBAT` sits at ground, so the DS3231's whole advantage over the ESP32's internal timer disappears the moment power drops. A coin cell fixes it directly. The more interesting alternative, noted at the time, is to drop the RTC altogether and pull the time over Wi-Fi, which the ESP32 already has — cheaper, far better than ±5 ppm, and it removes the setup ritual rather than merely surviving it. The trade is a device that needs a network to be correct.
 
-8. **Add a ground plane.** The current 2-layer layout routes ground as discrete traces — there is no copper pour anywhere on the board. The 0.35 mm `GND` net class keeps that from being naive, but a poured plane on the bottom layer would still lower impedance, shorten return paths, and simplify routing. Nothing on this board switches fast enough to make the pour difficult.
+7. **Route `INT/SQW` to a GPIO** and drive the update from the DS3231's 1 Hz square wave instead of `vTaskDelay`. Polling works, but the update instant slowly drifts relative to the RTC's second boundary. Two things to get right: `INT/SQW` is open-drain and needs a pullup, and `INTCN` in register `0Eh` defaults to 1 (alarm mode) with `RS2:RS1` defaulting to 8.192 kHz — so square-wave output at 1 Hz requires explicitly clearing `INTCN` and writing `RS2 = RS1 = 0`, not inheriting defaults. The ISR itself should do nothing but notify a task; I²C must never be run from interrupt context.
 
-9. **Use the target's minute and second in the interval math.** Setup collects a target hour, minute, and second, but the countdown arithmetic effectively assumes a target minute of zero. The buzzer trigger does compare the minute correctly, so the tune fires at the right time — but the displayed remaining time can disagree with it for any target that is not on the hour.
+8. **Buffer the buzzer.** The SMTB-0927-TW-R is a magnetic transducer with a 16 Ω coil and an 80 mA maximum rating. Through the 47 Ω series resistor from a 3.3 V GPIO, peak current is about **52 mA**, past the ESP32's 40 mA per-pin absolute maximum. PWM at 50% duty halves the average but not the peak. A small N-channel MOSFET or a 2N3904 would fix this properly.
 
-10. **USB-C instead of Micro-USB**, which would mean putting a connector and a regulator on the board itself rather than inheriting both from the DevKit.
+9. **Move segment A off IO2.** IO2 is a boot strapping pin on the ESP32. An LED to a common cathode is a weak enough pull-down that it boots fine in practice, but it is an unnecessary coupling between display state and boot behaviour. (IO5, used for SPI CS, is also a strapping pin, though it idles high and is far less likely to cause trouble.)
 
-11. **An enclosure.** A nine-digit display is worth mounting behind a bezel, and `hardware/board-3d.step` exists precisely so that can be modelled against real geometry instead of caliper measurements.
+10. **Pour a ground plane, and cut the via count.** The current 2-layer layout routes ground as discrete traces with no copper pour anywhere. The 0.35 mm `GND` net class keeps that from being naive, but a plane on the bottom layer would lower impedance and shorten return paths, and nothing here switches fast enough to make the pour difficult. The same pass should deal with the routing: the autorouter left roughly 86 vias, some close enough to component pads to make hand-soldering awkward and to invite shorts. Hand-routing the power and display nets first, then letting the autorouter handle what remains, is the fix.
+
+11. **USB-C instead of Micro-USB**, which would mean putting a connector and a regulator on the board itself rather than inheriting both from the DevKit.
+
+12. **Commit the enclosure CAD.** A two-part case was designed and 3D printed for this board — four screw bosses, cutouts for the displays, buttons and buzzer, and an indent for the Micro-USB connector — and the board is sitting in it in the photo above. The mechanical design is only documented as renders in `docs/presentation.pptx`; the CAD itself is missing, so the one part of this project that cannot currently be reproduced is the part that was actually finished.
 
 ---
 

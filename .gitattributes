@@ -9,6 +9,11 @@
 *.step -text -diff
 *.stp  -text -diff
 
+# Office documents are ZIP containers — never convert or attempt to diff them.
+*.docx -text -diff
+*.pptx -text -diff
+*.xlsx -text -diff
+
 # Firmware keeps normalised LF in the repository.
 *.c text eol=lf
 *.h text eol=lf
