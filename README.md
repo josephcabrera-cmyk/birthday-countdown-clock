@@ -64,9 +64,9 @@ A dedicated RTC was used rather than the ESP32's internal timer because the inte
 
 Note the exact variant: the **DS3231M** (as in `DS3231MZ+TRL`) uses an on-chip **MEMS resonator**, not the temperature-compensated crystal oscillator of the plain DS3231. It is specified to **±5 ppm** from 0 °C to +40 °C — roughly 2.6 minutes per year — rather than the ±2 ppm of the TCXO part. Still far better than the ESP32 alone, and the MEMS resonator removes an external crystal from the BOM, but it is a meaningfully different specification from the one the part number's family is usually credited with.
 
-**No backup cell is populated on this board.** There is no coin-cell holder in the schematic or the BOM, so `VBAT` is not battery-backed and the RTC does not retain time across a power cycle. In practice this means the clock re-enters setup mode on every boot. See [Possible improvements](#possible-improvements).
+**There is no backup supply on this board — `VBAT` is tied directly to ground.** That is the configuration the datasheet specifies when a backup supply is not used, so it is deliberate rather than an oversight, but the consequence is that the RTC does not retain time across a power cycle and the clock re-enters setup mode on every boot. See [Possible improvements](#possible-improvements).
 
-`INT/SQW` is also left unrouted, so the 1 Hz square-wave output the DS3231 can produce is unavailable to the firmware, and the display is updated by polling instead.
+Three of the RTC's pins are left unconnected: `32KHZ`, `RST`, and `INT/SQW`. The last one matters most — the DS3231 can emit a 1 Hz square wave on `INT/SQW`, which would give the firmware a hardware tick to synchronise against, but with the pin unrouted the display is updated by polling instead.
 
 ### Power
 
@@ -75,6 +75,15 @@ USB input at 5 V. There is no regulator on the custom board — the 3.3 V rail i
 Running the display driver from the same 3.3 V rail as the ESP32 is deliberate. The MAX6951 is specified from 2.7 V to 5.5 V and its logic inputs are CMOS levels referenced to V+, so keeping it at 3.3 V means the ESP32's SPI lines drive it directly with no level shifting.
 
 Worst-case current is dominated by the display: about 72 mA for the statically driven ninth digit, plus the multiplexed load of the MAX6951, plus roughly 80–160 mA for the ESP32 itself. That is within the regulator's rating, but it is worth knowing the headroom is not enormous, particularly inside an enclosure.
+
+`R3` (10 kΩ to 3.3 V) and `C4` (1 µF to ground) form an RC delay on the ESP32's `EN` pin, holding the module in reset until the rail has settled. The three remaining 10 kΩ resistors, `R4`–`R6`, are the button pullups.
+
+### Layout notes
+
+Two decisions in the board file are worth calling out, since neither is visible in the rendered PDF:
+
+- **Net classes.** `power` and `GND` are both assigned a 0.35 mm trace width, against an unconstrained default for signal nets, so the supply and return paths are deliberately wider than the rest of the routing.
+- **Test points.** `SCL`, `SDA`, `CLK`, `DIN`, `CS`, the buzzer drive, and both supply rails are each brought out to a labelled pad. Every bus on the board can be scoped without touching a component pin, which is what made bring-up tractable.
 
 ---
 
@@ -129,10 +138,15 @@ Replace `COM3` with the board's port — on Linux or macOS this is typically `/d
 ├── hardware/
 │   ├── schematic.pdf             # Schematic
 │   ├── board-layout.pdf          # PCB layout
-│   └── bill-of-materials.pdf     # BOM
+│   ├── bill-of-materials.pdf     # BOM
+│   └── source/
+│       ├── schematic.sch         # EAGLE 9.7 source
+│       └── board-layout.brd      # EAGLE 9.7 source
 └── docs/
     └── demo.gif
 ```
+
+The PDFs are for reading; the files under `hardware/source/` are the editable originals. Both open in Autodesk EAGLE 9.7 or later, and in Fusion Electronics.
 
 ---
 
@@ -162,7 +176,7 @@ Working through the build surfaced a number of things worth changing:
 
 7. **Move segment A off IO2.** IO2 is a boot strapping pin on the ESP32. An LED to a common cathode is a weak enough pull-down that it boots fine in practice, but it is an unnecessary coupling between display state and boot behaviour. (IO5, used for SPI CS, is also a strapping pin, though it idles high and is far less likely to cause trouble.)
 
-8. **Add a ground plane.** The current 2-layer layout routes ground as discrete traces. A poured plane on the bottom layer would lower impedance and simplify routing, and there is no signal on this board fast enough to make that difficult.
+8. **Add a ground plane.** The current 2-layer layout routes ground as discrete traces — there is no copper pour anywhere on the board. The 0.35 mm `GND` net class keeps that from being naive, but a poured plane on the bottom layer would still lower impedance, shorten return paths, and simplify routing. Nothing on this board switches fast enough to make the pour difficult.
 
 9. **Use the target's minute and second in the interval math.** Setup collects a target hour, minute, and second, but the countdown arithmetic effectively assumes a target minute of zero. The buzzer trigger does compare the minute correctly, so the tune fires at the right time — but the displayed remaining time can disagree with it for any target that is not on the hour.
 

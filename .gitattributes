@@ -1,0 +1,11 @@
+# EAGLE / Fusion Electronics sources are XML, but they must round-trip
+# byte-exact — leave line endings alone so a checkout on another platform
+# hands EAGLE the same file that was committed.
+*.sch -text
+*.brd -text
+*.lbr -text
+
+# Firmware keeps normalised LF in the repository.
+*.c text eol=lf
+*.h text eol=lf
+*.md text eol=lf
