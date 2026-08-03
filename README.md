@@ -191,4 +191,9 @@ Working through the build surfaced a number of things worth changing:
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Two licences, because this repository holds two different kinds of work:
+
+- **Firmware** (`firmware/`) — MIT. See [LICENSE](LICENSE).
+- **Hardware** (`hardware/`) — CERN Open Hardware Licence Version 2 – Permissive (`CERN-OHL-P-2.0`). See [hardware/LICENSE](hardware/LICENSE).
+
+MIT is a software licence. Its terms are written around "the Software" and do not map cleanly onto a schematic, a board file, a bill of materials, or a mechanical model. CERN-OHL-P is the hardware equivalent at the same permissive level, so both halves of the project carry the same practical terms — use it, modify it, build it, sell it, keep the notices.
