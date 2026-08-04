@@ -168,13 +168,18 @@ It is a readability refactor only: no behaviour was changed, and the known issue
     ├── demo.gif
     ├── board-assembled.jpg       # Finished board in its printed case
     ├── board-assembly.jpg        # Part-way through hand assembly
-    ├── final-paper.docx          # ESE 323 course write-up, Dec 2024
-    └── presentation.pptx         # ESE 323 project presentation
+    ├── final-paper.pdf           # ESE 323 course write-up, Dec 2024
+    ├── presentation.pdf          # ESE 323 project presentation
+    └── source/
+        ├── final-paper.docx      # Editable original
+        └── presentation.pptx     # Editable original
 ```
 
 The PDFs are for reading; the files under `hardware/source/` are the editable originals, and open in Autodesk EAGLE 9.7 or later and in Fusion Electronics.
 
-`docs/final-paper.docx` and `docs/presentation.pptx` are the original December 2024 course submissions. They are the primary record of what was built and tested at the time, including the enclosure design and the results section documenting the re-entry bug above. The paper is as submitted except for a closing section of feedback addressed to the course instructor, which has been removed as irrelevant here.
+[`docs/final-paper.pdf`](docs/final-paper.pdf) and [`docs/presentation.pdf`](docs/presentation.pdf) are the original December 2024 course submissions. They are the primary record of what was built and tested at the time, including the enclosure design and the results section documenting the re-entry bug above. The paper is as submitted except for a closing section of feedback addressed to the course instructor, which has been removed as irrelevant here.
+
+Both are committed as PDFs so they open in the browser without downloading anything; the editable Word and PowerPoint originals are under `docs/source/`.
 
 `board-3d.step` is the assembled board as solid geometry, exported to the AP214 schema. It carries real solids rather than a surface mesh, so it can be measured, sectioned, and used as a fit reference — which is what makes designing an enclosure around it practical. STEP is a neutral standard, so it opens in FreeCAD, KiCad, Onshape, SolidWorks, and Inventor without needing a Fusion licence.
 
@@ -222,7 +227,7 @@ Some of these were identified at the time and recorded in the December 2024 writ
 
 11. **USB-C instead of Micro-USB**, which would mean putting a connector and a regulator on the board itself rather than inheriting both from the DevKit.
 
-12. **Commit the enclosure CAD.** A two-part case was designed and 3D printed for this board — four screw bosses, cutouts for the displays, buttons and buzzer, and an indent for the Micro-USB connector — and the board is sitting in it in the photo above. The mechanical design is only documented as renders in `docs/presentation.pptx`; the CAD itself is missing, so the one part of this project that cannot currently be reproduced is the part that was actually finished.
+12. **Commit the enclosure CAD.** A two-part case was designed and 3D printed for this board — four screw bosses, cutouts for the displays, buttons and buzzer, and an indent for the Micro-USB connector — and the board is sitting in it in the photo above. The mechanical design is only documented as renders in [`docs/presentation.pdf`](docs/presentation.pdf); the CAD itself is missing, so the one part of this project that cannot currently be reproduced is the part that was actually finished.
 
 ---
 
