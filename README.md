@@ -137,6 +137,12 @@ Replace `COM3` with the board's port — on Linux or macOS this is typically `/d
 
 `main.c` is provided as the application source; drop it into the `main/` directory of an ESP-IDF project with a matching `CMakeLists.txt` to build.
 
+### A modularised version
+
+`firmware/modularized-code/` holds the same firmware split by peripheral — `max6951`, `ds3231`, `direct_led`, `display`, `buttons`, `buzzer`, `setup_ui`, and `countdown`, each with its own header — arranged as a ready-to-build ESP-IDF project rather than a single file to be copied into one.
+
+It is a readability refactor only: no behaviour was changed, and the known issues above are preserved rather than fixed. `firmware/main.c` remains the version that was actually built and demonstrated. See the [notes in that directory](firmware/modularized-code/README.md) before using it.
+
 ---
 
 ## Repository structure
@@ -144,7 +150,11 @@ Replace `COM3` with the board's port — on Linux or macOS this is typically `/d
 ```
 .
 ├── firmware/
-│   └── main.c                    # Application firmware (ESP-IDF)
+│   ├── main.c                    # Application firmware, as built (ESP-IDF)
+│   └── modularized-code/         # Same firmware split by peripheral
+│       ├── CMakeLists.txt
+│       └── main/                 # max6951, ds3231, direct_led, display,
+│                                 #   buttons, buzzer, setup_ui, countdown
 ├── hardware/
 │   ├── schematic.pdf             # Schematic
 │   ├── board-layout.pdf          # PCB layout
