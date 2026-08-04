@@ -2,6 +2,8 @@
 
 A custom PCB that counts down to a chosen birthday in `days:hours:minutes:seconds` across nine 7-segment displays, and plays "Happy Birthday" through a magnetic transducer when the countdown reaches zero.
 
+**ESE 323 · Stony Brook University · Fall 2024 semester** — designed, laid out, assembled, and programmed solo. Board files dated 12 November 2024; submitted 8 December 2024.
+
 ![Demo](docs/demo.gif)
 
 ▶ **[Full demo video](https://youtu.be/9NLcifpYV80)**
@@ -16,10 +18,12 @@ A custom PCB that counts down to a chosen birthday in `days:hours:minutes:second
 
 The clock takes the current time and a target date entered through three onboard pushbuttons, computes the remaining interval against a dedicated real-time clock, and refreshes the display once per second. When the RTC reaches the target month, day, hour, and minute, the countdown reads zero and a buzzer routine plays.
 
-Designed, laid out, assembled, and programmed solo as the final project for ESE 323 at Stony Brook University, submitted December 2024. The original course write-up and presentation are included under `docs/`.
+This was the final project for ESE 323 at Stony Brook University, built solo over the Fall 2024 semester. The original course write-up and presentation are included under `docs/`.
 
 | | |
 |---|---|
+| **Course** | ESE 323, Stony Brook University |
+| **Term** | Fall 2024 — submitted 8 December 2024 |
 | **MCU** | ESP32-DEVKITC-32E |
 | **Timekeeping** | DS3231MZ+TRL RTC (I²C, 400 kHz) |
 | **Display driver** | MAX6951CEE+ (SPI, 1 MHz) |
