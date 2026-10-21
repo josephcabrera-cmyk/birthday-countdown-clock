@@ -74,7 +74,7 @@ Note the exact variant: the **DS3231M** (as in `DS3231MZ+TRL`) uses an on-chip *
 
 **There is no backup supply on this board — `VBAT` is tied directly to ground.** That is the configuration the datasheet specifies when a backup supply is not used, so it is deliberate rather than an oversight, but the consequence is that the RTC does not retain time across a power cycle and the clock re-enters setup mode on every boot. See [Possible improvements](#possible-improvements).
 
-Three of the RTC's pins are left unconnected: `32KHZ`, `RST`, and `INT/SQW`. The last one matters most — the DS3231 can emit a 1 Hz square wave on `INT/SQW`, which would give the firmware a hardware tick to synchronise against, but with the pin unrouted the display is updated by polling instead.
+Three of the RTC's pins are left unconnected: `32KHZ`, `RST`, and `INT/SQW`. The last one matters most — the DS3231 can emit a 1 Hz square wave on `INT/SQW`, which would give the firmware a hardware tick to synchronize against, but with the pin unrouted the display is updated by polling instead.
 
 ### Power
 
@@ -91,7 +91,7 @@ Worst-case current is dominated by the display: about 72 mA for the statically d
 Two decisions in the board file are worth calling out, since neither is visible in the rendered PDF:
 
 - **Net classes.** `power` and `GND` are both assigned a 0.35 mm trace width, against an unconstrained default for signal nets, so the supply and return paths are deliberately wider than the rest of the routing.
-- **Test points.** `SCL`, `SDA`, `CLK`, `DIN`, `CS`, the buzzer drive, and both supply rails are each brought out to a labelled pad. Every bus on the board can be scoped without touching a component pin, which is what made bring-up tractable.
+- **Test points.** `SCL`, `SDA`, `CLK`, `DIN`, `CS`, the buzzer drive, and both supply rails are each brought out to a labeled pad. Every bus on the board can be scoped without touching a component pin, which is what made bring-up tractable.
 
 ---
 
@@ -117,7 +117,7 @@ Pressing **SET** during the countdown re-enters birthday setup without disturbin
 
 ## Firmware
 
-`firmware/main.c` — a single ESP-IDF application. `app_main()` initialises the buzzer's LEDC channel, I²C, SPI, the MAX6951, the direct-driven GPIO digit, and the buttons; runs the two-stage setup; then enters a polling loop that ticks once per second via `vTaskDelay(pdMS_TO_TICKS(1000))`.
+`firmware/main.c` — a single ESP-IDF application. `app_main()` initializes the buzzer's LEDC channel, I²C, SPI, the MAX6951, the direct-driven GPIO digit, and the buttons; runs the two-stage setup; then enters a polling loop that ticks once per second via `vTaskDelay(pdMS_TO_TICKS(1000))`.
 
 Each iteration reads all seven time registers from the DS3231 in one I²C transaction, converts them from BCD, computes the remaining days with `mktime()` and `difftime()` against a `struct tm` for the target (rolling to next year once the date has passed), then writes eight digits over SPI and the ninth over GPIO.
 
@@ -137,11 +137,11 @@ Replace `COM3` with the board's port — on Linux or macOS this is typically `/d
 
 `main.c` is provided as the application source; drop it into the `main/` directory of an ESP-IDF project with a matching `CMakeLists.txt` to build.
 
-### A modularised version
+### A modularized version
 
 `firmware/modularized-code/` holds the same firmware split by peripheral — `max6951`, `ds3231`, `direct_led`, `display`, `buttons`, `buzzer`, `setup_ui`, and `countdown`, each with its own header — arranged as a ready-to-build ESP-IDF project rather than a single file to be copied into one.
 
-It is a readability refactor only: no behaviour was changed, and the known issues above are preserved rather than fixed. `firmware/main.c` remains the version that was actually built and demonstrated. See the [notes in that directory](firmware/modularized-code/README.md) before using it.
+It is a readability refactor only: no behavior was changed, and the known issues above are preserved rather than fixed. `firmware/main.c` remains the version that was actually built and demonstrated. See the [notes in that directory](firmware/modularized-code/README.md) before using it.
 
 ---
 
@@ -181,7 +181,7 @@ The PDFs are for reading; the files under `hardware/source/` are the editable or
 
 Both are committed as PDFs so they open in the browser without downloading anything; the editable Word and PowerPoint originals are under `docs/source/`.
 
-`board-3d.step` is the assembled board as solid geometry, exported to the AP214 schema. It carries real solids rather than a surface mesh, so it can be measured, sectioned, and used as a fit reference — which is what makes designing an enclosure around it practical. STEP is a neutral standard, so it opens in FreeCAD, KiCad, Onshape, SolidWorks, and Inventor without needing a Fusion licence.
+`board-3d.step` is the assembled board as solid geometry, exported to the AP214 schema. It carries real solids rather than a surface mesh, so it can be measured, sectioned, and used as a fit reference — which is what makes designing an enclosure around it practical. STEP is a neutral standard, so it opens in FreeCAD, KiCad, Onshape, SolidWorks, and Inventor without needing a Fusion license.
 
 ---
 
@@ -193,7 +193,7 @@ The part selection keeps that practical: every passive is 0805, the RTC is an 8-
 
 <img src="docs/board-assembly.jpg" width="520" alt="The board part-way through assembly, held in a Stickvise">
 
-*Part-way through assembly. The MAX6951, RTC passives and the `RSET`/`CSET` network are down; the displays, switches and buzzer are not. The labelled test points and the R8–R15 ballast cluster beside LED8 are both visible on the silkscreen.*
+*Part-way through assembly. The MAX6951, RTC passives and the `RSET`/`CSET` network are down; the displays, switches and buzzer are not. The labeled test points and the R8–R15 ballast cluster beside LED8 are both visible on the silkscreen.*
 
 ---
 
@@ -219,9 +219,9 @@ Some of these were identified at the time and recorded in the December 2024 writ
 
 7. **Route `INT/SQW` to a GPIO** and drive the update from the DS3231M's 1 Hz square wave instead of `vTaskDelay`. Polling works, but the update instant slowly drifts relative to the RTC's second boundary. Two things to get right: `INT/SQW` is open-drain and needs a pullup, and `INTCN` in register `0Eh` powers up as 1 (alarm-interrupt mode), so it must be cleared before the pin outputs the square wave. Unlike the plain DS3231, the DS3231M has no `RS2:RS1` rate-select bits — bits 4:3 of `0Eh` are unused — and its square wave is fixed at 1 Hz, so clearing `INTCN` is the only write needed. The ISR itself should do nothing but notify a task; I²C must never be run from interrupt context.
 
-8. **Buffer the buzzer.** The SMTB-0927-TW-R is a magnetic transducer with a 16 Ω coil and an 80 mA maximum rating. Through the 47 Ω series resistor, an ideal 3.3 V source would drive about **52 mA** — more than the roughly 40 mA an ESP32 GPIO is characterised to source at maximum drive strength while holding VOH ≥ 2.64 V. That 40 mA is a typical DC-characteristics figure, not an absolute-maximum rating; in practice the pin's own output resistance limits the current and VOH sags, so the GPIO is run past its characterised drive. PWM at 50% duty halves the average but not the peak. A small N-channel MOSFET or a 2N3904 would fix this properly.
+8. **Buffer the buzzer.** The SMTB-0927-TW-R is a magnetic transducer with a 16 Ω coil and an 80 mA maximum rating. Through the 47 Ω series resistor, an ideal 3.3 V source would drive about **52 mA** — more than the roughly 40 mA an ESP32 GPIO is characterized to source at maximum drive strength while holding VOH ≥ 2.64 V. That 40 mA is a typical DC-characteristics figure, not an absolute-maximum rating; in practice the pin's own output resistance limits the current and VOH sags, so the GPIO is run past its characterized drive. PWM at 50% duty halves the average but not the peak. A small N-channel MOSFET or a 2N3904 would fix this properly.
 
-9. **Move segment A off IO2.** IO2 is a boot strapping pin on the ESP32. An LED to a common cathode is a weak enough pull-down that it boots fine in practice, but it is an unnecessary coupling between display state and boot behaviour. (IO5, used for SPI CS, is also a strapping pin, though it idles high and is far less likely to cause trouble.)
+9. **Move segment A off IO2.** IO2 is a boot strapping pin on the ESP32. An LED to a common cathode is a weak enough pull-down that it boots fine in practice, but it is an unnecessary coupling between display state and boot behavior. (IO5, used for SPI CS, is also a strapping pin, though it idles high and is far less likely to cause trouble.)
 
 10. **Pour a ground plane, and cut the via count.** The current 2-layer layout routes ground as discrete traces with no copper pour anywhere. The 0.35 mm `GND` net class keeps that from being naive, but a plane on the bottom layer would lower impedance and shorten return paths, and nothing here switches fast enough to make the pour difficult. The same pass should deal with the routing: the autorouter left roughly 86 vias, some close enough to component pads to make hand-soldering awkward and to invite shorts. Hand-routing the power and display nets first, then letting the autorouter handle what remains, is the fix.
 
@@ -233,9 +233,9 @@ Some of these were identified at the time and recorded in the December 2024 writ
 
 ## License
 
-Two licences, because this repository holds two different kinds of work:
+Two licenses, because this repository holds two different kinds of work:
 
 - **Firmware** (`firmware/`) — MIT. See [LICENSE](LICENSE).
 - **Hardware** (`hardware/`) — CERN Open Hardware Licence Version 2 – Permissive (`CERN-OHL-P-2.0`). See [hardware/LICENSE](hardware/LICENSE).
 
-MIT is a software licence. Its terms are written around "the Software" and do not map cleanly onto a schematic, a board file, a bill of materials, or a mechanical model. CERN-OHL-P is the hardware equivalent at the same permissive level, so both halves of the project carry the same practical terms — use it, modify it, build it, sell it, keep the notices.
+MIT is a software license. Its terms are written around "the Software" and do not map cleanly onto a schematic, a board file, a bill of materials, or a mechanical model. CERN-OHL-P is the hardware equivalent at the same permissive level, so both halves of the project carry the same practical terms — use it, modify it, build it, sell it, keep the notices.

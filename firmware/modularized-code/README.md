@@ -1,4 +1,4 @@
-# Modularised firmware
+# Modularized firmware
 
 The same firmware as [`../main.c`](../main.c), split by peripheral into an
 ESP-IDF project that builds directly rather than needing to be copied into one.
@@ -28,7 +28,7 @@ built, flashed, and demonstrated. Treat this as a refactor pending verification.
 
 ## What changed, and what did not
 
-This is a readability refactor. Behaviour is intended to be identical, so the
+This is a readability refactor. Behavior is intended to be identical, so the
 known issues in the original are preserved rather than fixed — the birthday
 re-entry path still does not accept changed values, the countdown arithmetic
 still assumes a target minute of zero, `PATTERN_G` still equals `PATTERN_D` so
