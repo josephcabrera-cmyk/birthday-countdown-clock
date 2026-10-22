@@ -161,9 +161,9 @@ It is a readability refactor only: no behavior was changed, and the known issues
 │   ├── bill-of-materials.pdf     # BOM
 │   ├── board-3d.step             # 3D model of the assembled board
 │   └── source/
-│       ├── schematic.sch         # EAGLE 9.7 source
-│       ├── board-layout.brd      # EAGLE 9.7 source
-│       └── bill-of-materials.xlsx  # BOM source
+│       ├── birthday-countdown-clock.sch  # EAGLE 9.7 schematic
+│       ├── birthday-countdown-clock.brd  # EAGLE 9.7 board
+│       └── bill-of-materials.xlsx        # BOM source
 └── docs/
     ├── demo.gif
     ├── board-assembled.jpg       # Finished board in its printed case
@@ -175,7 +175,7 @@ It is a readability refactor only: no behavior was changed, and the known issues
         └── presentation.pptx     # Editable original
 ```
 
-The PDFs are for reading; the files under `hardware/source/` are the editable originals, and open in Autodesk EAGLE 9.7 or later and in Fusion Electronics.
+The PDFs are for reading; the files under `hardware/source/` are the editable originals, and open in Autodesk EAGLE 9.7 or later and in Fusion Electronics. The schematic and board share a file name, which is how EAGLE pairs them for forward and back annotation.
 
 [`docs/final-paper.pdf`](docs/final-paper.pdf) and [`docs/presentation.pdf`](docs/presentation.pdf) are the original December 2024 course submissions. They are the primary record of what was built and tested at the time, including the enclosure design and the results section documenting the re-entry bug above. The paper is as submitted except for a closing section of feedback addressed to the course instructor, which has been removed as irrelevant here.
 
