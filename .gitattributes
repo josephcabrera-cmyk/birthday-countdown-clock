@@ -1,5 +1,5 @@
 # EAGLE / Fusion Electronics sources are XML, but they must round-trip
-# byte-exact — leave line endings alone so a checkout on another platform
+# byte-exact. Leave line endings alone so a checkout on another platform
 # hands EAGLE the same file that was committed.
 *.sch -text
 *.brd -text
@@ -9,12 +9,12 @@
 *.step -text -diff
 *.stp  -text -diff
 
-# Office documents are ZIP containers — never convert or attempt to diff them.
+# Office documents are ZIP containers, so never convert or attempt to diff them.
 *.docx -text -diff
 *.pptx -text -diff
 *.xlsx -text -diff
 
-# Firmware keeps normalised LF in the repository.
+# Firmware keeps normalized LF in the repository.
 *.c text eol=lf
 *.h text eol=lf
 *.md text eol=lf

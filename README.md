@@ -2,7 +2,7 @@
 
 A custom PCB that counts down to a chosen birthday in `days:hours:minutes:seconds` across nine 7-segment displays, and plays "Happy Birthday" through a magnetic transducer when the countdown reaches zero.
 
-**ESE 323 · Stony Brook University · Fall 2024 semester** — designed, laid out, assembled, and programmed solo. Board files dated 12 November 2024; submitted 8 December 2024.
+**ESE 323 · Stony Brook University · Fall 2024 semester.** Designed, laid out, assembled, and programmed solo. Board files dated 12 November 2024; submitted 8 December 2024.
 
 ![Demo](docs/demo.gif)
 
@@ -23,7 +23,7 @@ This was the final project for ESE 323 at Stony Brook University, built solo ove
 | | |
 |---|---|
 | **Course** | ESE 323, Stony Brook University |
-| **Term** | Fall 2024 — submitted 8 December 2024 |
+| **Term** | Fall 2024, submitted 8 December 2024 |
 | **MCU** | ESP32-DEVKITC-32E |
 | **Timekeeping** | DS3231MZ+TRL RTC (I²C, 400 kHz) |
 | **Display driver** | MAX6951CEE+ (SPI, 1 MHz) |
@@ -37,14 +37,14 @@ This was the final project for ESE 323 at Stony Brook University, built solo ove
 
 | Function | GPIO | | Function | GPIO |
 |---|---|---|---|---|
-| I²C SCL | 22 | | Digit 9 — segment A | 2 |
-| I²C SDA | 21 | | Digit 9 — segment B | 4 |
-| SPI DIN | 23 | | Digit 9 — segment C | 17 |
-| SPI CLK | 18 | | Digit 9 — segment D | 13 |
-| SPI CS | 5 | | Digit 9 — segment E | 14 |
-| Button — UP (SW2) | 26 | | Digit 9 — segment F | 32 |
-| Button — DOWN (SW3) | 27 | | Digit 9 — segment G | 16 |
-| Button — SET (SW1) | 25 | | Digit 9 — decimal point | 19 |
+| I²C SCL | 22 | | Digit 9, segment A | 2 |
+| I²C SDA | 21 | | Digit 9, segment B | 4 |
+| SPI DIN | 23 | | Digit 9, segment C | 17 |
+| SPI CLK | 18 | | Digit 9, segment D | 13 |
+| SPI CS | 5 | | Digit 9, segment E | 14 |
+| UP button (SW2) | 26 | | Digit 9, segment F | 32 |
+| DOWN button (SW3) | 27 | | Digit 9, segment G | 16 |
+| SET button (SW1) | 25 | | Digit 9, decimal point | 19 |
 | Buzzer | 33 | | | |
 
 ---
@@ -53,16 +53,16 @@ This was the final project for ESE 323 at Stony Brook University, built solo ove
 
 ### Display driving
 
-The countdown needs nine digits — three for days (up to 365), then two each for hours, minutes, and seconds. The MAX6951 drives eight of them. The ninth, which shows the ones place of the seconds, is driven **directly from eight ESP32 GPIOs** through discrete 145 Ω ballast resistors (R8–R15).
+The countdown needs nine digits: three for days (up to 365), then two each for hours, minutes, and seconds. The MAX6951 drives eight of them. The ninth, which shows the ones place of the seconds, is driven **directly from eight ESP32 GPIOs** through discrete 145 Ω ballast resistors (R8–R15).
 
 This split is the most interesting part of the display design, because the two halves behave differently:
 
-- The **eight driven digits** are multiplexed by the MAX6951 at a rate set by its internal oscillator, and their segment current is constant-current regulated. No per-segment resistors are needed anywhere on that side of the board — one resistor, `RSET` (56 kΩ on ISET), sets the peak segment current for all of them. `CSET` (27 pF on OSC) works together with `RSET` to set the multiplex clock.
-- The **ninth digit** is static. Its segments are held on continuously rather than duty-cycled, so it needs its own eight ballast resistors, and it draws current the whole time a segment is lit — roughly 9 mA per segment at 3.3 V assuming a ~2 V forward drop, or about 72 mA with every segment and the decimal point on. That is more average current than any single multiplexed digit, and matching its apparent brightness to the multiplexed eight is a real design consideration rather than an automatic result.
+- The **eight driven digits** are multiplexed by the MAX6951 at a rate set by its internal oscillator, and their segment current is constant-current regulated. No per-segment resistors are needed anywhere on that side of the board. One resistor, `RSET` (56 kΩ on ISET), sets the peak segment current for all of them. `CSET` (27 pF on OSC) works together with `RSET` to set the multiplex clock.
+- The **ninth digit** is static. Its segments are held on continuously rather than duty-cycled, so it needs its own eight ballast resistors, and it draws current the whole time a segment is lit: roughly 9 mA per segment at 3.3 V assuming a ~2 V forward drop, or about 72 mA with every segment and the decimal point on. That is more average current than any single multiplexed digit, and matching its apparent brightness to the multiplexed eight is a real design consideration rather than an automatic result.
 
 The decimal point on this ninth digit is toggled once per second, giving a visible "heartbeat" that confirms the loop is running.
 
-**Why the MAX6951 over discrete shift registers:** it handles multiplex scanning, per-digit brightness, and **hexadecimal** decoding internally over SPI (the on-chip decoders are hexadecimal, 0–9 and A–F, selectable per digit — not BCD), and it keeps a static RAM per digit so individual digits can be updated without rewriting the whole display. A 74HC595 chain occupies the same three pins but pushes refresh timing onto the ESP32 and needs per-segment ballast resistors on every digit to hold brightness uniform. The MAX6951's segment drivers are also slew-rate limited to reduce EMI.
+**Why the MAX6951 over discrete shift registers:** it handles multiplex scanning, per-digit brightness, and **hexadecimal** decoding internally over SPI (the on-chip decoders are hexadecimal, not BCD: 0–9 and A–F, selectable per digit), and it keeps a static RAM per digit so individual digits can be updated without rewriting the whole display. A 74HC595 chain occupies the same three pins but pushes refresh timing onto the ESP32 and needs per-segment ballast resistors on every digit to hold brightness uniform. The MAX6951's segment drivers are also slew-rate limited to reduce EMI.
 
 The driver is reconfigured between the two display modes: no-decode (`0x00`) during setup, so arbitrary segment patterns can spell out `YEAR`, `MONTH`, `DAY`, `HOUR`, `MIN`, `SEC`, and `BIRTHDAY`; and full hexadecimal decode (`0xFF`) during the countdown, so digits can be written as plain numbers.
 
@@ -70,11 +70,11 @@ The driver is reconfigured between the two display modes: no-decode (`0x00`) dur
 
 A dedicated RTC was used rather than the ESP32's internal timer because the internal oscillator drifts badly and loses state on every reset.
 
-Note the exact variant: the **DS3231M** (as in `DS3231MZ+TRL`) uses an on-chip **MEMS resonator**, not the temperature-compensated crystal oscillator of the plain DS3231. It is specified to **±5 ppm** (±0.432 s/day) from −45 °C to +85 °C — roughly 2.6 minutes per year — where the TCXO part holds ±2 ppm from 0 °C to +40 °C. Still far better than the ESP32 alone, and the MEMS resonator removes an external crystal from the BOM, but it is a meaningfully different specification from the one the part number's family is usually credited with.
+Note the exact variant: the **DS3231M** (as in `DS3231MZ+TRL`) uses an on-chip **MEMS resonator**, not the temperature-compensated crystal oscillator of the plain DS3231. It is specified to **±5 ppm** (±0.432 s/day) from −45 °C to +85 °C (roughly 2.6 minutes per year), where the TCXO part holds ±2 ppm from 0 °C to +40 °C. Still far better than the ESP32 alone, and the MEMS resonator removes an external crystal from the BOM, but it is a meaningfully different specification from the one the part number's family is usually credited with.
 
-**There is no backup supply on this board — `VBAT` is tied directly to ground.** That is the configuration the datasheet specifies when a backup supply is not used, so it is deliberate rather than an oversight, but the consequence is that the RTC does not retain time across a power cycle and the clock re-enters setup mode on every boot. See [Possible improvements](#possible-improvements).
+**There is no backup supply on this board: `VBAT` is tied directly to ground.** That is the configuration the datasheet specifies when a backup supply is not used, so it is deliberate rather than an oversight, but the consequence is that the RTC does not retain time across a power cycle and the clock re-enters setup mode on every boot. See [Possible improvements](#possible-improvements).
 
-Three of the RTC's pins are left unconnected: `32KHZ`, `RST`, and `INT/SQW`. The last one matters most — the DS3231 can emit a 1 Hz square wave on `INT/SQW`, which would give the firmware a hardware tick to synchronize against, but with the pin unrouted the display is updated by polling instead.
+Three of the RTC's pins are left unconnected: `32KHZ`, `RST`, and `INT/SQW`. The last one matters most: the DS3231 can emit a 1 Hz square wave on `INT/SQW`, which would give the firmware a hardware tick to synchronize against, but with the pin unrouted the display is updated by polling instead.
 
 ### Power
 
@@ -97,31 +97,31 @@ Two decisions in the board file are worth calling out, since neither is visible 
 
 ## User interface
 
-Three Omron B3S-1000 tactile switches drive the entire interface. Each is active low, pulled up by a 10 kΩ resistor with a 1 µF capacitor to ground — a 10 ms RC time constant that debounces in hardware — and the firmware applies a further 50 ms software debounce on top.
+Three Omron B3S-1000 tactile switches drive the entire interface. Each is active low, pulled up by a 10 kΩ resistor with a 1 µF capacitor to ground, a 10 ms RC time constant that debounces in hardware. The firmware applies a further 50 ms software debounce on top.
 
 | Switch | GPIO | Function |
 |---|---|---|
-| **SW1 — SET** | 25 | Commit the active field and advance to the next |
-| **SW2 — UP** | 26 | Increment the active field, wrapping at its limit |
-| **SW3 — DOWN** | 27 | Decrement the active field, wrapping at its limit |
+| **SW1 (SET)** | 25 | Commit the active field and advance to the next |
+| **SW2 (UP)** | 26 | Increment the active field, wrapping at its limit |
+| **SW3 (DOWN)** | 27 | Decrement the active field, wrapping at its limit |
 
-Setup runs in two stages. First the current time — year, month, day, hour, minute, second — which is written to the DS3231. Then a `BIRTHDAY` prompt, followed by the target month, day, hour, minute, and second. Each field is shown with its name spelled on the display alongside the value, and field limits are enforced as you scroll, including a correct maximum day per month with leap-year handling.
+Setup runs in two stages. First the current time (year, month, day, hour, minute, second), which is written to the DS3231. Then a `BIRTHDAY` prompt, followed by the target month, day, hour, minute, and second. Each field is shown with its name spelled on the display alongside the value, and field limits are enforced as you scroll, including a correct maximum day per month with leap-year handling.
 
 Pressing **SET** during the countdown re-enters birthday setup without disturbing the clock.
 
-**Known issue:** that re-entry path does not fully work. The device returns to the birthday prompts, but the values cannot actually be changed from what was entered at first boot. This is a firmware fault, not a hardware one — the same buttons set those fields correctly during the initial run — and it is recorded here because it was identified during testing and reported in the course write-up rather than discovered afterwards.
+**Known issue:** that re-entry path does not fully work. The device returns to the birthday prompts, but the values cannot actually be changed from what was entered at first boot. This is a firmware fault, not a hardware one: the same buttons set those fields correctly during the initial run. It is recorded here because it was identified during testing and reported in the course write-up rather than discovered afterwards.
 
-**On persistence — worth being explicit:** the current time is stored in the DS3231's registers, but the target date is held only in RAM. Neither survives a power cycle on this build: the RTC has no backup cell, and the target is never written to flash. Both must be re-entered at every boot. The DS3231 cannot help here even in principle — unlike the DS1307, which has 56 bytes of battery-backed scratch RAM, the DS3231 has no general-purpose user RAM. Storing the target in the ESP32's NVS is the correct fix and is listed below.
+**On persistence:** the current time is stored in the DS3231's registers, but the target date is held only in RAM. Neither survives a power cycle on this build: the RTC has no backup cell, and the target is never written to flash. Both must be re-entered at every boot. The DS3231 cannot help here even in principle: unlike the DS1307, which has 56 bytes of battery-backed scratch RAM, the DS3231 has no general-purpose user RAM. Storing the target in the ESP32's NVS is the correct fix and is listed below.
 
 ---
 
 ## Firmware
 
-`firmware/main.c` — a single ESP-IDF application. `app_main()` initializes the buzzer's LEDC channel, I²C, SPI, the MAX6951, the direct-driven GPIO digit, and the buttons; runs the two-stage setup; then enters a polling loop that ticks once per second via `vTaskDelay(pdMS_TO_TICKS(1000))`.
+`firmware/main.c` is a single ESP-IDF application. `app_main()` initializes the buzzer's LEDC channel, I²C, SPI, the MAX6951, the direct-driven GPIO digit, and the buttons; runs the two-stage setup; then enters a polling loop that ticks once per second via `vTaskDelay(pdMS_TO_TICKS(1000))`.
 
 Each iteration reads all seven time registers from the DS3231 in one I²C transaction, converts them from BCD, computes the remaining days with `mktime()` and `difftime()` against a `struct tm` for the target (rolling to next year once the date has passed), then writes eight digits over SPI and the ninth over GPIO.
 
-The buzzer is triggered by a software comparison inside that same loop rather than by an RTC alarm — when the current month, day, hour, and minute all match the target and seconds are zero, `play_birthday_song()` runs and a latch prevents it retriggering. An RTC-alarm implementation would not have helped: the DS3231's alarms can match on day-of-month but not on month, so an alarm would fire every month and need the same software filter anyway.
+The buzzer is triggered by a software comparison inside that same loop rather than by an RTC alarm. When the current month, day, hour, and minute all match the target and seconds are zero, `play_birthday_song()` runs and a latch prevents it retriggering. An RTC-alarm implementation would not have helped: the DS3231's alarms can match on day-of-month but not on month, so an alarm would fire every month and need the same software filter anyway.
 
 Notes are produced with LEDC hardware PWM at 10-bit resolution and 50% duty, with the frequency changed per note.
 
@@ -133,13 +133,13 @@ idf.py build
 idf.py -p COM3 flash monitor
 ```
 
-Replace `COM3` with the board's port — on Linux or macOS this is typically `/dev/ttyUSB0`.
+Replace `COM3` with the board's port. On Linux or macOS it is typically `/dev/ttyUSB0`.
 
 `main.c` is provided as the application source; drop it into the `main/` directory of an ESP-IDF project with a matching `CMakeLists.txt` to build.
 
 ### A modularized version
 
-`firmware/modularized-code/` holds the same firmware split by peripheral — `max6951`, `ds3231`, `direct_led`, `display`, `buttons`, `buzzer`, `setup_ui`, and `countdown`, each with its own header — arranged as a ready-to-build ESP-IDF project rather than a single file to be copied into one.
+`firmware/modularized-code/` holds the same firmware split by peripheral (`max6951`, `ds3231`, `direct_led`, `display`, `buttons`, `buzzer`, `setup_ui`, and `countdown`, each with its own header), arranged as a ready-to-build ESP-IDF project rather than a single file to be copied into one.
 
 It is a readability refactor only: no behavior was changed, and the known issues above are preserved rather than fixed. `firmware/main.c` remains the version that was actually built and demonstrated. See the [notes in that directory](firmware/modularized-code/README.md) before using it.
 
@@ -181,7 +181,7 @@ The PDFs are for reading; the files under `hardware/source/` are the editable or
 
 Both are committed as PDFs so they open in the browser without downloading anything; the editable Word and PowerPoint originals are under `docs/source/`.
 
-`board-3d.step` is the assembled board as solid geometry, exported to the AP214 schema. It carries real solids rather than a surface mesh, so it can be measured, sectioned, and used as a fit reference — which is what makes designing an enclosure around it practical. STEP is a neutral standard, so it opens in FreeCAD, KiCad, Onshape, SolidWorks, and Inventor without needing a Fusion license.
+`board-3d.step` is the assembled board as solid geometry, exported to the AP214 schema. It carries real solids rather than a surface mesh, so it can be measured, sectioned, and used as a fit reference, which is what makes designing an enclosure around it practical. STEP is a neutral standard, so it opens in FreeCAD, KiCad, Onshape, SolidWorks, and Inventor without needing a Fusion license.
 
 ---
 
@@ -203,23 +203,23 @@ Some of these were identified at the time and recorded in the December 2024 writ
 
 ### Firmware
 
-1. **Persist the target date to NVS.** The birthday currently lives in RAM globals and is lost at every power cycle. `nvs_set_u8` for month and day, a `nvs_commit`, and a first-boot check would remove the most annoying part of using the device. Flash endurance is irrelevant here — this gets written a handful of times ever.
+1. **Persist the target date to NVS.** The birthday currently lives in RAM globals and is lost at every power cycle. `nvs_set_u8` for month and day, a `nvs_commit`, and a first-boot check would remove the most annoying part of using the device. Flash endurance is irrelevant here, since this gets written only a handful of times.
 
 2. **Fix the birthday re-entry path.** Pressing `SET` during the countdown returns to the birthday prompts, but the values cannot actually be changed once they have been set. This was known at submission and is the most user-visible defect in the firmware.
 
 3. **Check the oscillator stop flag at boot.** Register `0Fh` bit 7 (`OSF`) is set whenever the oscillator has halted, which flags the stored time as meaningless. The firmware should read it and force time-set mode rather than counting down from garbage.
 
-4. **Use the target's minute and second in the interval math.** Setup collects a target hour, minute, and second, but the countdown arithmetic effectively assumes a target minute of zero. The buzzer trigger does compare the minute correctly, so the tune fires at the right time — but the displayed remaining time can disagree with it for any target that is not on the hour.
+4. **Use the target's minute and second in the interval math.** Setup collects a target hour, minute, and second, but the countdown arithmetic effectively assumes a target minute of zero. The buzzer trigger does compare the minute correctly, so the tune fires at the right time, but the displayed remaining time can disagree with it for any target that is not on the hour.
 
-5. **Drive the buzzer near its resonance.** That transducer's 95 dBA rating is at its 2.7 kHz resonant frequency, but the melody plays notes from 262 Hz to 494 Hz — one to three octaves below it. Output at those frequencies is far quieter than the part is capable of. Transposing the melody up, or accepting a single-tone alert at 2.7 kHz, would be dramatically louder for zero cost.
+5. **Drive the buzzer near its resonance.** That transducer's 95 dBA rating is at its 2.7 kHz resonant frequency, but the melody plays notes from 262 Hz to 494 Hz, about 2.5 to 3.4 octaves below it. Output at those frequencies is far quieter than the part is capable of. Transposing the melody up, or accepting a single-tone alert at 2.7 kHz, would be dramatically louder for zero cost.
 
 ### Hardware
 
-6. **Give the clock a memory — by battery, or by removing the RTC entirely.** As built, `VBAT` sits at ground, so the DS3231's whole advantage over the ESP32's internal timer disappears the moment power drops. A coin cell fixes it directly. The more interesting alternative, noted at the time, is to drop the RTC altogether and pull the time over Wi-Fi, which the ESP32 already has — cheaper, far better than ±5 ppm, and it removes the setup ritual rather than merely surviving it. The trade is a device that needs a network to be correct.
+6. **Give the clock a memory, either with a battery or by removing the RTC entirely.** As built, `VBAT` sits at ground, so the DS3231's whole advantage over the ESP32's internal timer disappears the moment power drops. A coin cell fixes it directly. The more interesting alternative, noted at the time, is to drop the RTC altogether and pull the time over Wi-Fi, which the ESP32 already has. That is cheaper and far better than ±5 ppm, and it removes the setup ritual rather than merely surviving it. The trade is a device that needs a network to be correct.
 
-7. **Route `INT/SQW` to a GPIO** and drive the update from the DS3231M's 1 Hz square wave instead of `vTaskDelay`. Polling works, but the update instant slowly drifts relative to the RTC's second boundary. Two things to get right: `INT/SQW` is open-drain and needs a pullup, and `INTCN` in register `0Eh` powers up as 1 (alarm-interrupt mode), so it must be cleared before the pin outputs the square wave. Unlike the plain DS3231, the DS3231M has no `RS2:RS1` rate-select bits — bits 4:3 of `0Eh` are unused — and its square wave is fixed at 1 Hz, so clearing `INTCN` is the only write needed. The ISR itself should do nothing but notify a task; I²C must never be run from interrupt context.
+7. **Route `INT/SQW` to a GPIO** and drive the update from the DS3231M's 1 Hz square wave instead of `vTaskDelay`. Polling works, but the update instant slowly drifts relative to the RTC's second boundary. Two things to get right: `INT/SQW` is open-drain and needs a pullup, and `INTCN` in register `0Eh` powers up as 1 (alarm-interrupt mode), so it must be cleared before the pin outputs the square wave. Unlike the plain DS3231, the DS3231M has no `RS2:RS1` rate-select bits (bits 4:3 of `0Eh` are unused), and its square wave is fixed at 1 Hz, so clearing `INTCN` is the only write needed. The ISR itself should do nothing but notify a task; I²C must never be run from interrupt context.
 
-8. **Buffer the buzzer.** The SMTB-0927-TW-R is a magnetic transducer with a 16 Ω coil and an 80 mA maximum rating. Through the 47 Ω series resistor, an ideal 3.3 V source would drive about **52 mA** — more than the roughly 40 mA an ESP32 GPIO is characterized to source at maximum drive strength while holding VOH ≥ 2.64 V. That 40 mA is a typical DC-characteristics figure, not an absolute-maximum rating; in practice the pin's own output resistance limits the current and VOH sags, so the GPIO is run past its characterized drive. PWM at 50% duty halves the average but not the peak. A small N-channel MOSFET or a 2N3904 would fix this properly.
+8. **Buffer the buzzer.** The SMTB-0927-TW-R is a magnetic transducer with a 16 Ω coil and an 80 mA maximum rating. Through the 47 Ω series resistor, an ideal 3.3 V source would drive about **52 mA**, more than the roughly 40 mA an ESP32 GPIO is characterized to source at maximum drive strength while holding VOH ≥ 2.64 V. That 40 mA is a typical DC-characteristics figure, not an absolute-maximum rating; in practice the pin's own output resistance limits the current and VOH sags, so the GPIO is run past its characterized drive. PWM at 50% duty halves the average but not the peak. A small N-channel MOSFET or a 2N3904 would fix this properly.
 
 9. **Move segment A off IO2.** IO2 is a boot strapping pin on the ESP32. An LED to a common cathode is a weak enough pull-down that it boots fine in practice, but it is an unnecessary coupling between display state and boot behavior. (IO5, used for SPI CS, is also a strapping pin, though it idles high and is far less likely to cause trouble.)
 
@@ -227,7 +227,7 @@ Some of these were identified at the time and recorded in the December 2024 writ
 
 11. **USB-C instead of Micro-USB**, which would mean putting a connector and a regulator on the board itself rather than inheriting both from the DevKit.
 
-12. **Commit the enclosure CAD.** A two-part case was designed and 3D printed for this board — four screw bosses, cutouts for the displays, buttons and buzzer, and an indent for the Micro-USB connector — and the board is sitting in it in the photo above. The mechanical design is only documented as renders in [`docs/presentation.pdf`](docs/presentation.pdf); the CAD itself is missing, so the one part of this project that cannot currently be reproduced is the part that was actually finished.
+12. **Commit the enclosure CAD.** A two-part case was designed and 3D printed for this board, with four screw bosses, cutouts for the displays, buttons and buzzer, and an indent for the Micro-USB connector. The board is sitting in it in the photo above. The mechanical design is only documented as renders in [`docs/presentation.pdf`](docs/presentation.pdf); the CAD itself is missing, so the one part of this project that cannot currently be reproduced is the part that was actually finished.
 
 ---
 
@@ -235,7 +235,7 @@ Some of these were identified at the time and recorded in the December 2024 writ
 
 Two licenses, because this repository holds two different kinds of work:
 
-- **Firmware** (`firmware/`) — MIT. See [LICENSE](LICENSE).
-- **Hardware** (`hardware/`) — CERN Open Hardware Licence Version 2 – Permissive (`CERN-OHL-P-2.0`). See [hardware/LICENSE](hardware/LICENSE).
+- **Firmware** (`firmware/`): MIT. See [LICENSE](LICENSE).
+- **Hardware** (`hardware/`): CERN Open Hardware Licence Version 2 – Permissive (`CERN-OHL-P-2.0`). See [hardware/LICENSE](hardware/LICENSE).
 
-MIT is a software license. Its terms are written around "the Software" and do not map cleanly onto a schematic, a board file, a bill of materials, or a mechanical model. CERN-OHL-P is the hardware equivalent at the same permissive level, so both halves of the project carry the same practical terms — use it, modify it, build it, sell it, keep the notices.
+MIT is a software license. Its terms are written around "the Software" and do not map cleanly onto a schematic, a board file, a bill of materials, or a mechanical model. CERN-OHL-P is the hardware equivalent at the same permissive level, so both halves of the project carry the same practical terms: use it, modify it, build it, sell it, keep the notices.

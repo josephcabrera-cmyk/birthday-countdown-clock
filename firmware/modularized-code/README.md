@@ -29,7 +29,7 @@ built, flashed, and demonstrated. Treat this as a refactor pending verification.
 ## What changed, and what did not
 
 This is a readability refactor. Behavior is intended to be identical, so the
-known issues in the original are preserved rather than fixed — the birthday
+known issues in the original are preserved rather than fixed: the birthday
 re-entry path still does not accept changed values, the countdown arithmetic
 still assumes a target minute of zero, `PATTERN_G` still equals `PATTERN_D` so
 `G` renders as `D`, and the `SET` handler in the countdown loop still logs
