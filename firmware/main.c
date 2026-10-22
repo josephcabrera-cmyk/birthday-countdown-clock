@@ -22,7 +22,6 @@
 #define SPI_SCLK_PIN               18     // CLK pin
 #define SPI_CS_PIN                 5     // CS pin
 
-// Updated direct LED segment pin definitions
 #define LED_SEG_A                  2     // Segment A
 #define LED_SEG_B                  4     // Segment B
 #define LED_SEG_C                  17    // Segment C
@@ -40,7 +39,6 @@
 // Button debounce time in milliseconds
 #define DEBOUNCE_TIME   50
 
-// Add buzzer-related defines
 #define BUZZER_GPIO 33 // From schematic
 #define LEDC_TIMER LEDC_TIMER_0
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
@@ -147,7 +145,6 @@ typedef enum {
     SETUP_DONE
 } setup_state_t;
 
-// Add new structure for birthday values
 typedef struct {
     uint8_t month;
     uint8_t day;
@@ -174,7 +171,6 @@ typedef struct {
 } setup_values_t;
 
 
-// Add global variables for birthday values
 static uint8_t g_birthday_month;
 static uint8_t g_birthday_day;
 static uint8_t g_birthday_hour;
@@ -253,7 +249,6 @@ static const uint8_t SEC_pattern[] = {
     PATTERN_C
 };
 
-// Modified display message structure
 static const display_message_t preset_messages[] = {
     {"YEAR",     YEAR_pattern,     4},
     {"MONTH",    MONTH_pattern,    5},
@@ -779,7 +774,6 @@ static void direct_led_display(uint8_t number, bool show_dp) {
     gpio_set_level(LED_SEG_DP, show_dp ? 1 : 0);
 }
 
-// Add this function to set the time on the DS3231
 static esp_err_t ds3231_set_time(uint8_t seconds, uint8_t minutes, uint8_t hours, 
                                  uint8_t date, uint8_t month, uint8_t year) {
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -1230,10 +1224,8 @@ void app_main(void) {
     while (1) {
         uint8_t seconds, minutes, hours, date, month, year;
         
-// Inside while(1) loop in app_main()
 if (ds3231_read_time(&seconds, &minutes, &hours, 
                      &date, &month, &year) == ESP_OK) {
-						       // Add long-press detection here
         if (is_button_pressed(&btn_set)) {
                 ESP_LOGI(TAG, "Long press detected - Entering birthday setup mode");
                 
