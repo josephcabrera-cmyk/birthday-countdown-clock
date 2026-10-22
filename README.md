@@ -1,37 +1,34 @@
 # Birthday Countdown Clock
 
-A custom PCB that counts down to a chosen birthday in `days:hours:minutes:seconds` across nine 7-segment displays, and plays "Happy Birthday" through a magnetic transducer when the countdown reaches zero.
+A custom PCB that counts down to a birthday in `days:hours:minutes:seconds` on nine 7-segment displays and plays "Happy Birthday" on a buzzer when it reaches zero.
 
-**ESE 323 · Stony Brook University · Fall 2024 semester.** Designed, laid out, assembled, and programmed solo. Board files dated 12 November 2024; submitted 8 December 2024.
+Final project for ESE 323 at Stony Brook University, Fall 2024, done solo: schematic, layout, assembly, and firmware. The board files are dated November 12, 2024, and the project was submitted December 8, 2024.
 
 ![Demo](docs/demo.gif)
 
-▶ **[Full demo video](https://youtu.be/9NLcifpYV80)**
+[Full demo video](https://youtu.be/9NLcifpYV80)
 
-<img src="docs/board-assembled.jpg" width="560" alt="The assembled board seated in its 3D-printed enclosure, all nine digits populated">
+<img src="docs/board-assembled.jpg" width="560" alt="The assembled board in its 3D-printed enclosure, all nine digits populated">
 
-*The finished board in its printed case. Nine displays, the MAX6951 at left, the DevKit socketed at right, and the three setup buttons along the bottom edge.*
+*The finished board in its printed case: nine displays, the MAX6951 on the left, the DevKit on the right, and the three setup buttons along the bottom edge.*
 
 ---
 
 ## Overview
 
-The clock takes the current time and a target date entered through three onboard pushbuttons, computes the remaining interval against a dedicated real-time clock, and refreshes the display once per second. When the RTC reaches the target month, day, hour, and minute, the countdown reads zero and a buzzer routine plays.
-
-This was the final project for ESE 323 at Stony Brook University, built solo over the Fall 2024 semester. The original course write-up and presentation are included under `docs/`.
+Three buttons set the current time and the target date. A DS3231M real-time clock keeps time, the ESP32 works out the time remaining, and the display updates once a second. When the clock reaches the target month, day, hour, and minute, the countdown hits zero and the buzzer plays.
 
 | | |
 |---|---|
-| **Course** | ESE 323, Stony Brook University |
-| **Term** | Fall 2024, submitted 8 December 2024 |
+| **Course** | ESE 323, Stony Brook University, Fall 2024 |
 | **MCU** | ESP32-DEVKITC-32E |
-| **Timekeeping** | DS3231MZ+TRL RTC (I²C, 400 kHz) |
+| **Real-time clock** | DS3231MZ+TRL (I²C, 400 kHz) |
 | **Display driver** | MAX6951CEE+ (SPI, 1 MHz) |
-| **Display** | 9 × SunLED XZFMDK07C, common cathode |
-| **Audio** | PUI Audio SMTB-0927-TW-R magnetic transducer |
-| **Power** | Micro-USB via the DevKit, 5 V in / 3.3 V logic |
+| **Displays** | 9 × SunLED XZFMDK07C, common cathode |
+| **Buzzer** | PUI Audio SMTB-0927-TW-R magnetic transducer |
+| **Power** | 5 V from Micro-USB through the DevKit, 3.3 V logic |
 | **Firmware** | C, ESP-IDF |
-| **PCB** | 2-layer, designed in Autodesk EAGLE / Fusion Electronics |
+| **PCB** | 2 layers, designed in Autodesk EAGLE / Fusion Electronics |
 
 ### Pin map
 
@@ -51,79 +48,79 @@ This was the final project for ESE 323 at Stony Brook University, built solo ove
 
 ## Hardware
 
-### Display driving
+### Display
 
-The countdown needs nine digits: three for days (up to 365), then two each for hours, minutes, and seconds. The MAX6951 drives eight of them. The ninth, which shows the ones place of the seconds, is driven **directly from eight ESP32 GPIOs** through discrete 145 Ω ballast resistors (R8–R15).
+The countdown needs nine digits: three for days (up to 365) and two each for hours, minutes, and seconds. The MAX6951 drives eight of them. The ninth, the ones digit of the seconds, is wired straight to eight ESP32 GPIOs through 145 Ω resistors (R8–R15).
 
-This split is the most interesting part of the display design, because the two halves behave differently:
+The two groups work differently:
 
-- The **eight driven digits** are multiplexed by the MAX6951 at a rate set by its internal oscillator, and their segment current is constant-current regulated. No per-segment resistors are needed anywhere on that side of the board. One resistor, `RSET` (56 kΩ on ISET), sets the peak segment current for all of them. `CSET` (27 pF on OSC) works together with `RSET` to set the multiplex clock.
-- The **ninth digit** is static. Its segments are held on continuously rather than duty-cycled, so it needs its own eight ballast resistors, and it draws current the whole time a segment is lit: roughly 9 mA per segment at 3.3 V assuming a ~2 V forward drop, or about 72 mA with every segment and the decimal point on. That is more average current than any single multiplexed digit, and matching its apparent brightness to the multiplexed eight is a real design consideration rather than an automatic result.
+- **The eight MAX6951 digits** are multiplexed, and the driver regulates segment current itself, so that side of the board has no per-segment resistors. `RSET` (56 kΩ on ISET) sets the peak segment current for all eight, and `CSET` (27 pF on OSC) sets the multiplex clock together with `RSET`.
+- **The ninth digit** is static. Its segments stay on instead of being multiplexed, so it needs its own resistors and draws current the whole time a segment is lit: about 9 mA per segment at 3.3 V with a ~2 V LED drop, or about 72 mA with every segment and the decimal point on. That's more average current than any multiplexed digit, so its brightness doesn't automatically match the other eight.
 
-The decimal point on this ninth digit is toggled once per second, giving a visible "heartbeat" that confirms the loop is running.
+The decimal point on the ninth digit toggles once a second as a heartbeat, so you can see the main loop is running.
 
-**Why the MAX6951 over discrete shift registers:** it handles multiplex scanning, per-digit brightness, and **hexadecimal** decoding internally over SPI (the on-chip decoders are hexadecimal, not BCD: 0–9 and A–F, selectable per digit), and it keeps a static RAM per digit so individual digits can be updated without rewriting the whole display. A 74HC595 chain occupies the same three pins but pushes refresh timing onto the ESP32 and needs per-segment ballast resistors on every digit to hold brightness uniform. The MAX6951's segment drivers are also slew-rate limited to reduce EMI.
+**Why the MAX6951 instead of shift registers:** it handles the multiplexing, per-digit brightness, and decoding itself over SPI. Its decoders are hexadecimal (0–9 and A–F, not BCD) and can be set per digit, and it stores each digit, so one digit can change without rewriting the rest. A chain of 74HC595s would use the same three pins, but the ESP32 would have to handle refresh timing, and every segment of every digit would need its own resistor to keep the brightness even. The MAX6951's segment drivers are also slew-rate limited to reduce EMI.
 
-The driver is reconfigured between the two display modes: no-decode (`0x00`) during setup, so arbitrary segment patterns can spell out `YEAR`, `MONTH`, `DAY`, `HOUR`, `MIN`, `SEC`, and `BIRTHDAY`; and full hexadecimal decode (`0xFF`) during the countdown, so digits can be written as plain numbers.
+During setup the driver runs in no-decode mode (`0x00`) so it can spell out `YEAR`, `MONTH`, `DAY`, `HOUR`, `MIN`, `SEC`, and `BIRTHDAY`. During the countdown it switches to hex decode (`0xFF`) so digits can be written as plain numbers.
 
 ### Timekeeping
 
-A dedicated RTC was used rather than the ESP32's internal timer because the internal oscillator drifts badly and loses state on every reset.
+The ESP32's internal oscillator drifts and loses the time on every reset, so a separate RTC keeps time.
 
-Note the exact variant: the **DS3231M** (as in `DS3231MZ+TRL`) uses an on-chip **MEMS resonator**, not the temperature-compensated crystal oscillator of the plain DS3231. It is specified to **±5 ppm** (±0.432 s/day) from −45 °C to +85 °C (roughly 2.6 minutes per year), where the TCXO part holds ±2 ppm from 0 °C to +40 °C. Still far better than the ESP32 alone, and the MEMS resonator removes an external crystal from the BOM, but it is a meaningfully different specification from the one the part number's family is usually credited with.
+The part is the DS3231M, which uses a built-in MEMS resonator instead of the plain DS3231's crystal. It's rated ±5 ppm (±0.432 s/day, or about 2.6 minutes a year) from −45 °C to +85 °C. The plain DS3231 holds ±2 ppm from 0 °C to +40 °C and ±3.5 ppm from −40 °C to +85 °C. The M version is less accurate, but still far better than the ESP32 alone.
 
-**There is no backup supply on this board: `VBAT` is tied directly to ground.** That is the configuration the datasheet specifies when a backup supply is not used, so it is deliberate rather than an oversight, but the consequence is that the RTC does not retain time across a power cycle and the clock re-enters setup mode on every boot. See [Possible improvements](#possible-improvements).
+There's no backup battery: `VBAT` is tied to ground. That's what the datasheet says to do when there's no backup supply, but it means the RTC loses the time when power is removed, and the clock goes back to setup on every boot. See [Possible improvements](#possible-improvements).
 
-Three of the RTC's pins are left unconnected: `32KHZ`, `RST`, and `INT/SQW`. The last one matters most: the DS3231 can emit a 1 Hz square wave on `INT/SQW`, which would give the firmware a hardware tick to synchronize against, but with the pin unrouted the display is updated by polling instead.
+Three RTC pins are unconnected: `32KHZ`, `RST`, and `INT/SQW`. `INT/SQW` is the one that matters. It can output a 1 Hz square wave the firmware could sync to, but since it isn't routed, the firmware polls the RTC instead.
 
 ### Power
 
-Power enters at 5 V through the DevKit's Micro-USB connector; the custom board carries no connector or regulator of its own. The 3.3 V rail is supplied by the **AMS1117-3.3 already onboard the ESP32-DEVKITC-32E**, and the MAX6951, the RTC, and the LEDs all run from that single rail.
+5 V comes in through the DevKit's Micro-USB connector. The custom board has no connector or regulator of its own. The AMS1117-3.3 on the ESP32-DEVKITC-32E supplies the 3.3 V rail for the MAX6951, the RTC, and the LEDs.
 
-Running the display driver from the same 3.3 V rail as the ESP32 is deliberate. The MAX6951 is specified from 2.7 V to 5.5 V and its logic inputs are CMOS levels referenced to V+, so keeping it at 3.3 V means the ESP32's SPI lines drive it directly with no level shifting.
+The MAX6951 runs at 3.3 V on purpose. It's rated from 2.7 V to 5.5 V and its logic inputs are referenced to its supply, so at 3.3 V the ESP32's SPI pins drive it directly with no level shifting.
 
-Worst-case current is dominated by the display: about 72 mA for the statically driven ninth digit, plus the multiplexed load of the MAX6951, plus roughly 80–160 mA for the ESP32 itself. That is within the regulator's rating, but it is worth knowing the headroom is not enormous, particularly inside an enclosure.
+Worst-case current is about 72 mA for the static ninth digit, plus the MAX6951's multiplexed load, plus roughly 80–160 mA for the ESP32. That's within the regulator's rating, but without much headroom, especially inside an enclosure.
 
-`R3` (10 kΩ to 3.3 V) and `C4` (1 µF to ground) form an RC delay on the ESP32's `EN` pin, holding the module in reset until the rail has settled. The three remaining 10 kΩ resistors, `R4`–`R6`, are the button pullups.
+`R3` (10 kΩ to 3.3 V) and `C4` (1 µF to ground) delay the ESP32's `EN` pin so it stays in reset until the rail settles. `R4`–`R6` (10 kΩ) are the button pullups.
 
-### Layout notes
+### Layout
 
-Two decisions in the board file are worth calling out, since neither is visible in the rendered PDF:
+Two things in the board file don't show up in the PDF:
 
-- **Net classes.** `power` and `GND` are both assigned a 0.35 mm trace width, against an unconstrained default for signal nets, so the supply and return paths are deliberately wider than the rest of the routing.
-- **Test points.** `SCL`, `SDA`, `CLK`, `DIN`, `CS`, the buzzer drive, and both supply rails are each brought out to a labeled pad. Every bus on the board can be scoped without touching a component pin, which is what made bring-up tractable.
+- **Net classes:** `power` and `GND` use 0.35 mm traces, while signal nets use the default, so the supply and return paths are wider than everything else.
+- **Test points:** `SCL`, `SDA`, `CLK`, `DIN`, `CS`, the buzzer drive, and both supply rails each have a labeled pad. Every bus can be probed without touching a component pin, which made bring-up much easier.
 
 ---
 
 ## User interface
 
-Three Omron B3S-1000 tactile switches drive the entire interface. Each is active low, pulled up by a 10 kΩ resistor with a 1 µF capacitor to ground, a 10 ms RC time constant that debounces in hardware. The firmware applies a further 50 ms software debounce on top.
+Three Omron B3S-1000 switches run the whole interface. Each is active low, with a 10 kΩ pullup and a 1 µF capacitor to ground for a 10 ms RC hardware debounce. The firmware adds a 50 ms software debounce on top.
 
 | Switch | GPIO | Function |
 |---|---|---|
-| **SW1 (SET)** | 25 | Commit the active field and advance to the next |
-| **SW2 (UP)** | 26 | Increment the active field, wrapping at its limit |
-| **SW3 (DOWN)** | 27 | Decrement the active field, wrapping at its limit |
+| **SW1 (SET)** | 25 | Save the current field and move to the next |
+| **SW2 (UP)** | 26 | Increase the current field, wrapping at its limit |
+| **SW3 (DOWN)** | 27 | Decrease the current field, wrapping at its limit |
 
-Setup runs in two stages. First the current time (year, month, day, hour, minute, second), which is written to the DS3231. Then a `BIRTHDAY` prompt, followed by the target month, day, hour, minute, and second. Each field is shown with its name spelled on the display alongside the value, and field limits are enforced as you scroll, including a correct maximum day per month with leap-year handling.
+Setup has two stages. First you set the current time (year, month, day, hour, minute, second), which is written to the DS3231. Then a `BIRTHDAY` prompt appears and you set the target month, day, hour, minute, and second. Each field's name is spelled out on the display next to its value, and the limits are enforced as you scroll, including the right number of days in each month and leap years.
 
-Pressing **SET** during the countdown re-enters birthday setup without disturbing the clock.
+Pressing **SET** during the countdown goes back to birthday setup without disturbing the clock.
 
-**Known issue:** that re-entry path does not fully work. The device returns to the birthday prompts, but the values cannot actually be changed from what was entered at first boot. This is a firmware fault, not a hardware one: the same buttons set those fields correctly during the initial run. It is recorded here because it was identified during testing and reported in the course write-up rather than discovered afterwards.
+**Known issue:** going back to birthday setup doesn't fully work. The prompts come back, but the values can't be changed from what was entered at first boot. It's a firmware bug, not a hardware one, since the same buttons set those fields fine the first time. It was found during testing and reported in the course write-up.
 
-**On persistence:** the current time is stored in the DS3231's registers, but the target date is held only in RAM. Neither survives a power cycle on this build: the RTC has no backup cell, and the target is never written to flash. Both must be re-entered at every boot. The DS3231 cannot help here even in principle: unlike the DS1307, which has 56 bytes of battery-backed scratch RAM, the DS3231 has no general-purpose user RAM. Storing the target in the ESP32's NVS is the correct fix and is listed below.
+**Persistence:** the current time is kept in the DS3231's registers, and the target date only in RAM. Neither survives a power cycle: the RTC has no backup cell, and the target is never written to flash, so both have to be entered again at every boot. The DS3231 can't store the target either. Unlike the DS1307, which has 56 bytes of battery-backed RAM, it has no general-purpose user RAM. Saving the target to the ESP32's NVS would fix this (item 1 below).
 
 ---
 
 ## Firmware
 
-`firmware/main.c` is a single ESP-IDF application. `app_main()` initializes the buzzer's LEDC channel, I²C, SPI, the MAX6951, the direct-driven GPIO digit, and the buttons; runs the two-stage setup; then enters a polling loop that ticks once per second via `vTaskDelay(pdMS_TO_TICKS(1000))`.
+`firmware/main.c` is a single ESP-IDF application. `app_main()` sets up the buzzer's LEDC channel, I²C, SPI, the MAX6951, the GPIO-driven digit, and the buttons; runs the two-stage setup; then loops about once a second using `vTaskDelay(pdMS_TO_TICKS(1000))`.
 
-Each iteration reads all seven time registers from the DS3231 in one I²C transaction, converts them from BCD, computes the remaining days with `mktime()` and `difftime()` against a `struct tm` for the target (rolling to next year once the date has passed), then writes eight digits over SPI and the ninth over GPIO.
+Each pass reads all seven time registers from the DS3231 in one I²C transaction, converts them from BCD, and works out the days remaining with `mktime()` and `difftime()` against a `struct tm` for the target, rolling over to next year once the date has passed. Then it writes eight digits over SPI and the ninth over GPIO.
 
-The buzzer is triggered by a software comparison inside that same loop rather than by an RTC alarm. When the current month, day, hour, and minute all match the target and seconds are zero, `play_birthday_song()` runs and a latch prevents it retriggering. An RTC-alarm implementation would not have helped: the DS3231's alarms can match on day-of-month but not on month, so an alarm would fire every month and need the same software filter anyway.
+The buzzer is triggered from the same loop, not by an RTC alarm. When the month, day, hour, and minute match the target and the seconds are zero, `play_birthday_song()` runs, and a latch stops it from retriggering. An RTC alarm wouldn't have worked anyway: the DS3231's alarms can match the day of the month but not the month, so the alarm would go off every month.
 
-Notes are produced with LEDC hardware PWM at 10-bit resolution and 50% duty, with the frequency changed per note.
+The notes come from LEDC hardware PWM at 10-bit resolution and 50% duty, with the frequency changed for each note.
 
 ### Building
 
@@ -133,15 +130,13 @@ idf.py build
 idf.py -p COM3 flash monitor
 ```
 
-Replace `COM3` with the board's port. On Linux or macOS it is typically `/dev/ttyUSB0`.
+Use your board's port in place of `COM3` (usually `/dev/ttyUSB0` on Linux or macOS). `main.c` goes in the `main/` folder of an ESP-IDF project with a matching `CMakeLists.txt`.
 
-`main.c` is provided as the application source; drop it into the `main/` directory of an ESP-IDF project with a matching `CMakeLists.txt` to build.
+### Modularized version
 
-### A modularized version
+`firmware/modularized-code/` is the same firmware split by peripheral (`max6951`, `ds3231`, `direct_led`, `display`, `buttons`, `buzzer`, `setup_ui`, and `countdown`, each with a header), set up as a complete ESP-IDF project.
 
-`firmware/modularized-code/` holds the same firmware split by peripheral (`max6951`, `ds3231`, `direct_led`, `display`, `buttons`, `buzzer`, `setup_ui`, and `countdown`, each with its own header), arranged as a ready-to-build ESP-IDF project rather than a single file to be copied into one.
-
-It is a readability refactor only: no behavior was changed, and the known issues above are preserved rather than fixed. `firmware/main.c` remains the version that was actually built and demonstrated. See the [notes in that directory](firmware/modularized-code/README.md) before using it.
+It's a readability refactor only. Behavior is unchanged, and the known issues above are still there. `firmware/main.c` is the version that was built and demoed. Read the [notes in that folder](firmware/modularized-code/README.md) before using it.
 
 ---
 
@@ -167,7 +162,7 @@ It is a readability refactor only: no behavior was changed, and the known issues
 └── docs/
     ├── demo.gif
     ├── board-assembled.jpg       # Finished board in its printed case
-    ├── board-assembly.jpg        # Part-way through hand assembly
+    ├── board-assembly.jpg        # Partway through hand assembly
     ├── final-paper.pdf           # ESE 323 course write-up, Dec 2024
     ├── presentation.pdf          # ESE 323 project presentation
     └── source/
@@ -175,67 +170,63 @@ It is a readability refactor only: no behavior was changed, and the known issues
         └── presentation.pptx     # Editable original
 ```
 
-The PDFs are for reading; the files under `hardware/source/` are the editable originals, and open in Autodesk EAGLE 9.7 or later and in Fusion Electronics. The schematic and board share a file name, which is how EAGLE pairs them for forward and back annotation.
+The PDFs are for reading. The editable originals in `hardware/source/` open in Autodesk EAGLE 9.7 or later and in Fusion Electronics. The schematic and board share a file name, which is how EAGLE pairs them.
 
-[`docs/final-paper.pdf`](docs/final-paper.pdf) and [`docs/presentation.pdf`](docs/presentation.pdf) are the original December 2024 course submissions. They are the primary record of what was built and tested at the time, including the enclosure design and the results section documenting the re-entry bug above. The paper is as submitted except for a closing section of feedback addressed to the course instructor, which has been removed as irrelevant here.
+[`docs/final-paper.pdf`](docs/final-paper.pdf) and [`docs/presentation.pdf`](docs/presentation.pdf) are the original December 2024 course submissions, including the enclosure design and the test results that document the re-entry bug. The paper is as submitted, minus a closing section of feedback for the instructor. The Word and PowerPoint originals are in `docs/source/`.
 
-Both are committed as PDFs so they open in the browser without downloading anything; the editable Word and PowerPoint originals are under `docs/source/`.
-
-`board-3d.step` is the assembled board as solid geometry, exported to the AP214 schema. It carries real solids rather than a surface mesh, so it can be measured, sectioned, and used as a fit reference, which is what makes designing an enclosure around it practical. STEP is a neutral standard, so it opens in FreeCAD, KiCad, Onshape, SolidWorks, and Inventor without needing a Fusion license.
+`board-3d.step` is the assembled board as a solid model (AP214 schema), so it can be measured and used to design an enclosure around it. It opens in FreeCAD, KiCad, Onshape, SolidWorks, and Inventor.
 
 ---
 
 ## Manufacturing
 
-Bare boards were fabricated by **JLCPCB** as a 2-layer design, with all components sourced separately from DigiKey and assembled by hand.
+JLCPCB made the bare 2-layer boards. The parts came from DigiKey, and everything was soldered by hand.
 
-The part selection keeps that practical: every passive is 0805, the RTC is an 8-pin SOIC, and the display driver is a 16-pin QSOP. Nothing on the board is BGA or fine-pitch QFN, and the ESP32 DevKit sits on a through-hole footprint. The QSOP's 0.635 mm pitch is the tightest thing to solder by hand.
+The parts were chosen to make that practical: every passive is 0805, the RTC is an 8-pin SOIC, and the display driver is a 16-pin QSOP. There's no BGA or fine-pitch QFN, and the DevKit sits on a through-hole footprint. The QSOP's 0.635 mm pitch is the hardest thing to solder.
 
-<img src="docs/board-assembly.jpg" width="520" alt="The board part-way through assembly, held in a Stickvise">
+<img src="docs/board-assembly.jpg" width="520" alt="The board partway through assembly, held in a Stickvise">
 
-*Part-way through assembly. The MAX6951, RTC passives and the `RSET`/`CSET` network are down; the displays, switches and buzzer are not. The labeled test points and the R8–R15 ballast cluster beside LED8 are both visible on the silkscreen.*
+*Partway through assembly. The MAX6951, the RTC passives, and the `RSET`/`CSET` network are on; the displays, switches, and buzzer aren't yet. The labeled test points and the R8–R15 resistors next to LED8 are visible on the silkscreen.*
 
 ---
 
 ## Possible improvements
 
-Some of these were identified at the time and recorded in the December 2024 write-up; the rest came out of re-reading the board file and the datasheets afterwards.
+Some of these were noted in the December 2024 write-up. The rest came from going back through the board file and the datasheets later.
 
 ### Firmware
 
-1. **Persist the target date to NVS.** The birthday currently lives in RAM globals and is lost at every power cycle. `nvs_set_u8` for month and day, a `nvs_commit`, and a first-boot check would remove the most annoying part of using the device. Flash endurance is irrelevant here, since this gets written only a handful of times.
+1. **Save the target date in NVS.** It's in RAM now and lost at every power cycle. `nvs_set_u8` for month and day, `nvs_commit`, and a first-boot check would fix the most annoying part of using the clock. Flash wear isn't a concern, since it's only written a handful of times.
 
-2. **Fix the birthday re-entry path.** Pressing `SET` during the countdown returns to the birthday prompts, but the values cannot actually be changed once they have been set. This was known at submission and is the most user-visible defect in the firmware.
+2. **Fix birthday re-entry.** Pressing `SET` during the countdown brings back the birthday prompts, but the values can't be changed. This was known at submission and is the most visible firmware bug.
 
-3. **Check the oscillator stop flag at boot.** Register `0Fh` bit 7 (`OSF`) is set whenever the oscillator has halted, which flags the stored time as meaningless. The firmware should read it and force time-set mode rather than counting down from garbage.
+3. **Check the oscillator stop flag at boot.** Bit 7 of register `0Fh` (`OSF`) is set whenever the oscillator has stopped, which means the stored time can't be trusted. The firmware should read it and force time setup instead of counting down from a bad time.
 
-4. **Use the target's minute and second in the interval math.** Setup collects a target hour, minute, and second, but the countdown arithmetic effectively assumes a target minute of zero. The buzzer trigger does compare the minute correctly, so the tune fires at the right time, but the displayed remaining time can disagree with it for any target that is not on the hour.
+4. **Use the target minute and second in the countdown.** Setup collects a target hour, minute, and second, but the countdown math assumes the minute is zero. The buzzer check does compare the minute, so the song plays at the right time, but the time remaining on the display is off for any target that isn't on the hour.
 
-5. **Drive the buzzer near its resonance.** That transducer's 95 dBA rating is at its 2.7 kHz resonant frequency, but the melody plays notes from 262 Hz to 494 Hz, about 2.5 to 3.4 octaves below it. Output at those frequencies is far quieter than the part is capable of. Transposing the melody up, or accepting a single-tone alert at 2.7 kHz, would be dramatically louder for zero cost.
+5. **Play the melody near the buzzer's resonance.** The transducer's 95 dBA rating is at its 2.7 kHz resonant frequency, but the melody's notes run from 262 Hz to 494 Hz, about 2.5 to 3.4 octaves below that, so it's much quieter than it could be. Transposing the melody up, or using a single 2.7 kHz tone, would be much louder at no extra cost.
 
 ### Hardware
 
-6. **Give the clock a memory, either with a battery or by removing the RTC entirely.** As built, `VBAT` sits at ground, so the DS3231's whole advantage over the ESP32's internal timer disappears the moment power drops. A coin cell fixes it directly. The more interesting alternative, noted at the time, is to drop the RTC altogether and pull the time over Wi-Fi, which the ESP32 already has. That is cheaper and far better than ±5 ppm, and it removes the setup ritual rather than merely surviving it. The trade is a device that needs a network to be correct.
+6. **Keep the time through power loss.** With `VBAT` at ground, the RTC loses the time whenever power drops, which throws away its main advantage over the ESP32's internal timer. A coin cell fixes that. The other option, noted at the time, is to drop the RTC and get the time over Wi-Fi, which the ESP32 already has. That's cheaper, much more accurate than ±5 ppm, and gets rid of setting the time at every boot, but the clock would need a network to be correct.
 
-7. **Route `INT/SQW` to a GPIO** and drive the update from the DS3231M's 1 Hz square wave instead of `vTaskDelay`. Polling works, but the update instant slowly drifts relative to the RTC's second boundary. Two things to get right: `INT/SQW` is open-drain and needs a pullup, and `INTCN` in register `0Eh` powers up as 1 (alarm-interrupt mode), so it must be cleared before the pin outputs the square wave. Unlike the plain DS3231, the DS3231M has no `RS2:RS1` rate-select bits (bits 4:3 of `0Eh` are unused), and its square wave is fixed at 1 Hz, so clearing `INTCN` is the only write needed. The ISR itself should do nothing but notify a task; I²C must never be run from interrupt context.
+7. **Route `INT/SQW` to a GPIO** and update the display from the DS3231M's 1 Hz square wave instead of `vTaskDelay`. Polling works, but the display updates slowly drift relative to the RTC's seconds. `INT/SQW` is open-drain and needs a pullup, and `INTCN` in register `0Eh` powers up as 1 (alarm interrupt mode), so it has to be cleared before the pin outputs the square wave. The DS3231M has no `RS2:RS1` rate-select bits (bits 4:3 of `0Eh` are unused), and its square wave is fixed at 1 Hz, so clearing `INTCN` is the only write needed. The interrupt handler should only notify a task, since I²C should never run from an interrupt.
 
-8. **Buffer the buzzer.** The SMTB-0927-TW-R is a magnetic transducer with a 16 Ω coil and an 80 mA maximum rating. Through the 47 Ω series resistor, an ideal 3.3 V source would drive about **52 mA**, more than the roughly 40 mA an ESP32 GPIO is characterized to source at maximum drive strength while holding VOH ≥ 2.64 V. That 40 mA is a typical DC-characteristics figure, not an absolute-maximum rating; in practice the pin's own output resistance limits the current and VOH sags, so the GPIO is run past its characterized drive. PWM at 50% duty halves the average but not the peak. A small N-channel MOSFET or a 2N3904 would fix this properly.
+8. **Drive the buzzer through a transistor.** The SMTB-0927-TW-R has a 16 Ω coil and an 80 mA maximum. With the 47 Ω series resistor, an ideal 3.3 V source would push about 52 mA. That's more than the roughly 40 mA an ESP32 GPIO is characterized to source at maximum drive strength while holding VOH ≥ 2.64 V. The 40 mA is a typical figure, not an absolute maximum. In practice the pin's output resistance limits the current and VOH sags, so the GPIO runs past its characterized drive. PWM at 50% duty halves the average current but not the peak. A small N-channel MOSFET or a 2N3904 would fix it.
 
-9. **Move segment A off IO2.** IO2 is a boot strapping pin on the ESP32. An LED to a common cathode is a weak enough pull-down that it boots fine in practice, but it is an unnecessary coupling between display state and boot behavior. (IO5, used for SPI CS, is also a strapping pin, though it idles high and is far less likely to cause trouble.)
+9. **Move segment A off IO2.** IO2 is an ESP32 boot strapping pin. The LED to the common cathode is a weak enough pull-down that the board boots fine, but there's no reason to tie display state to boot behavior. IO5 (SPI CS) is also a strapping pin, but it idles high and is much less likely to cause trouble.
 
-10. **Pour a ground plane, and cut the via count.** The current 2-layer layout routes ground as discrete traces with no copper pour anywhere. The 0.35 mm `GND` net class keeps that from being naive, but a plane on the bottom layer would lower impedance and shorten return paths, and nothing here switches fast enough to make the pour difficult. The same pass should deal with the routing: the autorouter left roughly 86 vias, some close enough to component pads to make hand-soldering awkward and to invite shorts. Hand-routing the power and display nets first, then letting the autorouter handle what remains, is the fix.
+10. **Add a ground pour and cut the via count.** Ground is routed as traces with no copper pour. The 0.35 mm `GND` net class helps, but a ground plane on the bottom layer would lower impedance and shorten return paths, and nothing on this board switches fast enough to make that hard. The autorouter also left about 86 vias, some close enough to pads to make hand soldering awkward and risk shorts. Routing the power and display nets by hand first, then autorouting the rest, would fix both.
 
-11. **USB-C instead of Micro-USB**, which would mean putting a connector and a regulator on the board itself rather than inheriting both from the DevKit.
+11. **Use USB-C instead of Micro-USB.** That means putting a connector and a regulator on the board instead of using the DevKit's.
 
-12. **Commit the enclosure CAD.** A two-part case was designed and 3D printed for this board, with four screw bosses, cutouts for the displays, buttons and buzzer, and an indent for the Micro-USB connector. The board is sitting in it in the photo above. The mechanical design is only documented as renders in [`docs/presentation.pdf`](docs/presentation.pdf); the CAD itself is missing, so the one part of this project that cannot currently be reproduced is the part that was actually finished.
+12. **Add the enclosure CAD.** A two-part case was designed and 3D printed for this board, with four screw bosses and cutouts for the displays, buttons, buzzer, and Micro-USB connector. The board is in it in the photo above. The design only exists as renders in [`docs/presentation.pdf`](docs/presentation.pdf). The CAD files are missing, so the enclosure is the one part of the project that can't be rebuilt from this repo.
 
 ---
 
 ## License
 
-Two licenses, because this repository holds two different kinds of work:
-
 - **Firmware** (`firmware/`): MIT. See [LICENSE](LICENSE).
 - **Hardware** (`hardware/`): CERN Open Hardware Licence Version 2 – Permissive (`CERN-OHL-P-2.0`). See [hardware/LICENSE](hardware/LICENSE).
 
-MIT is a software license. Its terms are written around "the Software" and do not map cleanly onto a schematic, a board file, a bill of materials, or a mechanical model. CERN-OHL-P is the hardware equivalent at the same permissive level, so both halves of the project carry the same practical terms: use it, modify it, build it, sell it, keep the notices.
+MIT is written for software and doesn't map cleanly onto schematics, board files, or mechanical models. CERN-OHL-P is the hardware equivalent at the same permissive level, so both halves of the project have the same practical terms.
